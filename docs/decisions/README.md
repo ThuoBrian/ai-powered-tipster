@@ -1,0 +1,45 @@
+# Architecture Decision Records
+
+ADRs capture the significant, hard-to-reverse decisions in this repo: why a
+choice was made, what alternatives were considered, and what it costs us. They
+are written for future maintainers (human and AI), so context matters more
+than formality.
+
+## Index
+
+| Number | Decision | Status |
+|--------|----------|--------|
+| [0001](0001-monorepo-structure-uv-workspace.md) | Monorepo structure: uv workspace with apps/packages/services | Accepted |
+| [0002](0002-data-sources.md) | Data sources: football-data.co.uk primary, The Odds API live | Accepted |
+| [0003](0003-model-gbm-poisson-hybrid.md) | Model core: GBM → Poisson hybrid | Accepted |
+| [0004](0004-reasoning-layer-local-ollama.md) | Reasoning layer: local LLM via Ollama | Accepted |
+
+## Format
+
+Each ADR lives at `docs/decisions/NNNN-kebab-case-title.md`, where `NNNN` is
+the next unused number. Use this template:
+
+```markdown
+# NNNN — Short title of the decision
+
+- **Status:** Proposed | Accepted | Superseded by NNNN
+- **Date:** YYYY-MM-DD
+
+## Context
+
+What forces are in play: constraints, requirements, prior decisions. Keep it
+factual and specific to this repo.
+
+## Decision
+
+What we are doing, stated in the present tense. Prefer one clear sentence,
+then details.
+
+## Consequences
+
+What becomes easier, what becomes harder, what we now have to watch out for.
+Be honest about the downsides.
+```
+
+When a decision is superseded, do not delete the old ADR — mark its status
+and update the index.
