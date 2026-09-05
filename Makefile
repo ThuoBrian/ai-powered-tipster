@@ -2,9 +2,9 @@
 # Conventions: a root gate (setup/check) plus per-project prefixed targets.
 
 .DEFAULT_GOAL := help
-PYTHON := uv run
+PYTHON := uv run --all-packages
 
-.PHONY: help setup check precommit lint format typecheck test ingest clean tipster-core-test tipster-core-ingest tipster-ui-run
+.PHONY: help setup check precommit lint format typecheck test ingest clean clean-data run-ui tipster-core-test tipster-core-ingest tipster-ui-run
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_.-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
@@ -43,5 +43,10 @@ tipster-core-ingest: ## Ingest football-data.co.uk CSVs (big-5, 2024/25 onward)
 tipster-ui-run: ## Launch the Streamlit dashboard
 	$(PYTHON) streamlit run apps/tipster-ui/src/tipster_ui/app.py
 
-clean: ## Remove tool caches and local data
-	rm -rf .ruff_cache .mypy_cache .pytest_cache data
+run-ui: tipster-ui-run ## Alias for tipster-ui-run (name used in docs)
+
+clean: ## Remove tool caches
+	rm -rf .ruff_cache .mypy_cache .pytest_cache
+
+clean-data: ## Remove local data (DuckDB + raw CSV cache) — requires re-ingest
+	rm -rf data
