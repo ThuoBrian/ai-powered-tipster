@@ -6,10 +6,10 @@ the primary historical source (ADR 0002).
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class LeagueCode(str, Enum):
+class LeagueCode(StrEnum):
     """football-data.co.uk division codes for the leagues we cover."""
 
     PREMIER_LEAGUE = "E0"

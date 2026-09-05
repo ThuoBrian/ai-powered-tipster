@@ -12,7 +12,7 @@ are live. The model, backtester, and value finder land in phases 1–2 (see
 
 ## Quick start
 
-Requires [uv](https://docs.astral.sh/uv/) (Python ≥ 3.10 is managed for you).
+Requires [uv](https://docs.astral.sh/uv/) (Python ≥ 3.12 is managed for you).
 
 ```bash
 make setup    # workspace deps + pre-commit hooks

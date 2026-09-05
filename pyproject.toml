@@ -2,7 +2,7 @@
 name = "ai-powered-tipster"
 version = "0.1.0"
 description = "AI-powered football tipster: value-betting engine with calibrated probabilities, market comparison, and LLM-generated reasoning."
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = []
 
 [dependency-groups]
@@ -26,7 +26,7 @@ members = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 src = ["packages/tipster-core/src", "apps/tipster-ui/src"]
 
 [tool.ruff.lint]
@@ -37,7 +37,7 @@ select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF", "T20"]
 "**/ingest/cli.py" = ["T201"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 files = ["packages/tipster-core/src", "apps/tipster-ui/src"]
 disallow_untyped_defs = true
 check_untyped_defs = true
