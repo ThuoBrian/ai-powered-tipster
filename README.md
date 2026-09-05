@@ -68,4 +68,4 @@ code, never data.
 
 ## License
 
-TBD — the template's LICENSE was removed from this repo pending a decision.
+[MIT](LICENSE) — Copyright (c) 2026 Brian Thuo
