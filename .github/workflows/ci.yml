@@ -1,0 +1,75 @@
+# Repo-wide CI gate. Runs on every push to main and every PR.
+# Language-specific jobs (test-node, test-python, ...) are added under
+# .github/workflows as projects appear — this workflow stays language-
+# agnostic.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint and hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up base tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run repo-wide lint gate
+        run: pre-commit run --all-files
+
+  test-python:
+    name: Python lint, types, tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Typecheck (mypy)
+        run: uv run mypy
+
+      - name: Test (pytest)
+        run: uv run pytest
+
+  # ---------------------------------------------------------------------
+  # Add per-language jobs as projects are registered, e.g.:
+  #
+  # test-node:
+  #   name: Node tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #     - run: npm ci
+  #       working-directory: apps/my-app
+  #     - run: npm test
+  #       working-directory: apps/my-app
+  # ---------------------------------------------------------------------

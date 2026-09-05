@@ -1,0 +1,69 @@
+# --- Secrets and environment ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- OS artifacts ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editors ---
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# --- Logs ---
+logs/
+*.log
+pids/
+*.pid
+
+# --- Dependency directories (add per-language as projects appear) ---
+node_modules/
+.venv/
+venv/
+__pycache__/
+.venv*/
+vendor/
+
+# --- Build output ---
+dist/
+build/
+out/
+target/
+*.egg-info/
+.next/
+.nuxt/
+.turbo/
+.cache/
+
+# --- Test / coverage ---
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+junit*.xml
+
+# --- Temporary files ---
+tmp/
+temp/
+*.tmp
+~$*
+
+# --- Claude local artifacts ---
+.claude/settings.local.json
+
+# --- Data artifacts (local-only: DuckDB, raw CSVs) ---
+data/
+*.duckdb
+*.duckdb.wal
+
+# --- Python tool caches ---
+.ruff_cache/
+.mypy_cache/

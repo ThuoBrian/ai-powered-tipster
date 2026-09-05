@@ -1,0 +1,11 @@
+# CODEOWNERS — reviewers are auto-requested on PRs touching these paths.
+# Update GitHub usernames as the team grows.
+
+# Default owner for everything not matched below
+# * @your-username
+
+# Repo-wide conventions and CI need a maintainer's eye
+/docs/        @your-username
+/.github/     @your-username
+/Makefile     @your-username
+/CLAUDE.md    @your-username
