@@ -12,7 +12,8 @@ ai-powered-tipster/
 │   └── tipster-ui/          # Streamlit dashboard (deployable app)
 ├── packages/
 │   └── tipster-core/        # Pure domain library: contracts, ingest,
-│                            # storage, (later) features, model, value,
+│                            # storage, features, Elo, GBM → Poisson
+│                            # hybrid, Dixon-Coles reference, walk-forward
 │                            # backtest. No framework imports.
 ├── services/
 │   └── predictor/           # Scheduled fetch-and-predict job (port pending)
@@ -51,4 +52,5 @@ ai-powered-tipster/
 |-----------|--------------|-------|
 | tipster-ui | `make run-ui` | Streamlit on localhost:8501 |
 | tipster-ingest CLI | `make ingest` | Fills `data/tipster.duckdb` |
+| tipster-backtest CLI | `make backtest` | Walk-forward eval over `data/tipster.duckdb`; artifacts in `data/backtests/run-*/` |
 | predictor service | Not yet ported | See `services/predictor/README.md` |

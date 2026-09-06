@@ -13,6 +13,7 @@ than formality.
 | [0002](0002-data-sources.md) | Data sources: football-data.co.uk primary, The Odds API live | Accepted |
 | [0003](0003-model-gbm-poisson-hybrid.md) | Model core: GBM → Poisson hybrid | Accepted |
 | [0004](0004-reasoning-layer-local-ollama.md) | Reasoning layer: local LLM via Ollama | Accepted |
+| [0005](0005-phase-1-evaluation-protocol.md) | Phase 1 evaluation protocol: walk-forward harness | Accepted |
 
 ## Format
 

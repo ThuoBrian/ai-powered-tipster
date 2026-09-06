@@ -33,8 +33,9 @@ src = ["packages/tipster-core/src", "apps/tipster-ui/src"]
 select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF", "T20"]
 
 [tool.ruff.lint.per-file-ignores]
-# The CLI's stdout IS its interface — prints belong there.
+# The CLIs' stdout IS their interface — prints belong there.
 "**/ingest/cli.py" = ["T201"]
+"**/backtest/cli.py" = ["T201"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -47,6 +48,11 @@ warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 module = ["streamlit.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# lightgbm and sklearn ship no type stubs; scipy's are partial.
+module = ["lightgbm.*", "sklearn.*", "scipy.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

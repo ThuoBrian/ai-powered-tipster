@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 PYTHON := uv run --all-packages
 
-.PHONY: help setup check precommit lint format typecheck test ingest clean clean-data run-ui tipster-core-test tipster-core-ingest tipster-ui-run
+.PHONY: help setup check precommit lint format typecheck test ingest backtest clean clean-data run-ui tipster-core-test tipster-core-ingest tipster-core-backtest tipster-ui-run
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_.-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
@@ -34,11 +34,16 @@ test: ## Full pytest suite
 
 ingest: tipster-core-ingest ## Pull big-5 league data into data/tipster.duckdb
 
+backtest: tipster-core-backtest ## Run the walk-forward backtest over the local DuckDB
+
 tipster-core-test: ## Run tipster-core tests only
 	$(PYTHON) pytest packages/tipster-core
 
 tipster-core-ingest: ## Ingest football-data.co.uk CSVs (big-5, 2024/25 onward)
 	$(PYTHON) tipster-ingest
+
+tipster-core-backtest: ## Walk-forward backtest (all arms) -> data/backtests/
+	$(PYTHON) tipster-backtest
 
 tipster-ui-run: ## Launch the Streamlit dashboard
 	$(PYTHON) streamlit run apps/tipster-ui/src/tipster_ui/app.py

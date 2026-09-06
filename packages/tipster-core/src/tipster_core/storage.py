@@ -7,11 +7,14 @@ the ingest layer. The schema mirrors the canonical column order produced by
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import duckdb
 import polars as pl
 from duckdb import DuckDBPyConnection
+
+from tipster_core.leagues import LeagueCode
 
 DEFAULT_DB_PATH = Path("data") / "tipster.duckdb"
 
@@ -129,3 +132,34 @@ def recent_matches(con: DuckDBPyConnection, n: int = 20) -> pl.DataFrame:
         " FROM matches ORDER BY date DESC, league LIMIT ?",
         [n],
     ).pl()
+
+
+def load_matches(
+    con: DuckDBPyConnection,
+    leagues: Sequence[LeagueCode] | None = None,
+    seasons: Sequence[str] | None = None,
+) -> pl.DataFrame:
+    """Load the modelling corpus: all canonical columns, oldest first.
+
+    Optional *leagues* / *seasons* filters take football-data.co.uk codes.
+    Dates are returned as ``pl.Date``; goal columns are non-null.
+    """
+    query = f"SELECT {', '.join(name for name in _FRAME_COLUMNS)} FROM matches"
+    conditions: list[str] = []
+    params: list[str] = []
+    if leagues:
+        conditions.append("league IN (" + ", ".join("?" for _ in leagues) + ")")
+        params.extend(league.value for league in leagues)
+    if seasons:
+        conditions.append("season IN (" + ", ".join("?" for _ in seasons) + ")")
+        params.extend(seasons)
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+    query += " ORDER BY date, league, home_team"
+
+    frame = con.execute(query, params).pl()
+    return frame.with_columns(
+        pl.col("date").cast(pl.Date),
+        pl.col("home_goals").cast(pl.Int64),
+        pl.col("away_goals").cast(pl.Int64),
+    )

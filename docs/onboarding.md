@@ -15,7 +15,10 @@ make ingest
 # 4. Run the checks (the gate: lint + types + tests)
 make check
 
-# 5. Launch the dashboard
+# 5. Run the walk-forward backtest (prints the model gate verdict)
+make backtest
+
+# 6. Launch the dashboard
 make run-ui
 ```
 
@@ -27,7 +30,7 @@ later phases need (`THE_ODDS_API_KEY`, `FOOTBALL_DATA_API_KEY`) — copy to
 
 | Project | Type | Path | Stack | Status |
 |---------|------|------|-------|--------|
-| tipster-core | package | `packages/tipster-core` | Python, pydantic, polars, DuckDB, httpx | Phase 0 done (ingest + storage); model in phase 1 |
+| tipster-core | package | `packages/tipster-core` | Python, pydantic, polars, DuckDB, httpx, LightGBM, scipy | Phase 1 in progress: ingest + storage + features + GBM → Poisson hybrid + backtest harness |
 | tipster-ui | app | `apps/tipster-ui` | Python, Streamlit | Phase 0 done (status page); value finder in phase 2 |
 | predictor | service | `services/predictor` | Python, httpx (port pending) | Placeholder — scaffold lives in the template repo |
 
@@ -42,7 +45,8 @@ later phases need (`THE_ODDS_API_KEY`, `FOOTBALL_DATA_API_KEY`) — copy to
 
 ## Current state (2026-09)
 
-Phase 0 complete: monorepo scaffold, football-data.co.uk ingestion into
-DuckDB, pydantic contracts, Streamlit status page. Next: phase 1 — feature
-builder, GBM → Poisson hybrid model, walk-forward backtest harness
-(see [design.md](design.md#roadmap)).
+Phase 1 complete: feature builder, per-league Elo, GBM → Poisson hybrid
+(ADR 0003) with isotonic calibration, pure Dixon-Coles reference, and the
+walk-forward backtest harness (ADR 0005) — `make backtest` prints per-arm
+Brier/log loss, ROI, CLV, and the gate verdict. Next: phase 2 — the value
+engine and LLM reasoning layer (see [design.md](design.md#roadmap)).
