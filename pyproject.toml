@@ -35,7 +35,9 @@ select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF", "T20"]
 [tool.ruff.lint.per-file-ignores]
 # The CLIs' stdout IS their interface — prints belong there.
 "**/ingest/cli.py" = ["T201"]
+"**/ingest/odds_cli.py" = ["T201"]
 "**/backtest/cli.py" = ["T201"]
+"**/bet_log_cli.py" = ["T201"]
 
 [tool.mypy]
 python_version = "3.12"

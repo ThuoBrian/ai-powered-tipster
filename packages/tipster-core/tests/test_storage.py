@@ -7,7 +7,13 @@ import pytest
 
 from tipster_core.ingest.football_data import parse_matches_csv
 from tipster_core.leagues import LeagueCode
-from tipster_core.storage import connect, match_counts, recent_matches, replace_season
+from tipster_core.storage import (
+    connect,
+    load_match_results,
+    match_counts,
+    recent_matches,
+    replace_season,
+)
 
 PL = LeagueCode.PREMIER_LEAGUE
 
@@ -43,6 +49,40 @@ def test_recent_matches_shape_and_order(modern_csv: bytes) -> None:
         assert dates == sorted(dates, reverse=True)
     finally:
         con.close()
+
+
+def test_load_match_results_round_trips_odds(modern_csv: bytes) -> None:
+    frame = parse_matches_csv(modern_csv, PL, "2526")
+    con = connect(":memory:")
+    try:
+        replace_season(con, frame)
+        results = load_match_results(con, leagues=[PL])
+    finally:
+        con.close()
+
+    assert len(results) == 3
+    arsenal = next(r for r in results if r.home_team == "Arsenal")
+    assert arsenal.odds is not None
+    assert arsenal.odds.b365 is not None
+    assert arsenal.odds.b365.home == pytest.approx(1.85)
+
+    # Man City's row has zero-marker (missing) B365 odds but real Pinnacle
+    # odds — the MatchOdds group is present, just with one source null.
+    city = next(r for r in results if r.home_team == "Man City")
+    assert city.odds is not None
+    assert city.odds.b365 is None
+    assert city.odds.pinnacle is not None
+
+
+def test_load_match_results_odds_none_when_no_source_present(legacy_csv: bytes) -> None:
+    frame = parse_matches_csv(legacy_csv, PL, "0809")  # no odds columns in the source at all
+    con = connect(":memory:")
+    try:
+        replace_season(con, frame)
+        results = load_match_results(con, leagues=[PL])
+    finally:
+        con.close()
+    assert results and all(result.odds is None for result in results)
 
 
 def test_replace_season_rejects_mixed_frames() -> None:

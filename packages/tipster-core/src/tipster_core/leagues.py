@@ -6,6 +6,7 @@ the primary historical source (ADR 0002).
 
 from __future__ import annotations
 
+from datetime import date
 from enum import StrEnum
 
 
@@ -61,6 +62,25 @@ def season_code(start_year: int) -> str:
     '2526'
     """
     return f"{start_year % 100:02d}{(start_year + 1) % 100:02d}"
+
+
+def season_from_date(day: date) -> str:
+    """Infer the season code a date falls in.
+
+    European domestic seasons run roughly August-May; July is used as the
+    cutoff (pre-season fixtures can appear that early) so anything from July
+    onward belongs to the season starting that year, and everything before
+    it to the season that started the previous year.
+
+    >>> season_from_date(date(2026, 1, 15))
+    '2526'
+    >>> season_from_date(date(2025, 7, 1))
+    '2526'
+    >>> season_from_date(date(2025, 6, 30))
+    '2425'
+    """
+    start_year = day.year if day.month >= 7 else day.year - 1
+    return season_code(start_year)
 
 
 def season_label(code: str) -> str:

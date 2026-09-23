@@ -14,6 +14,10 @@ than formality.
 | [0003](0003-model-gbm-poisson-hybrid.md) | Model core: GBM → Poisson hybrid | Accepted |
 | [0004](0004-reasoning-layer-local-ollama.md) | Reasoning layer: local LLM via Ollama | Accepted |
 | [0005](0005-phase-1-evaluation-protocol.md) | Phase 1 evaluation protocol: walk-forward harness | Accepted |
+| [0006](0006-phase-2-value-engine.md) | Phase 2 value engine: Shin devig, EV, Kelly | Accepted |
+| [0007](0007-live-odds-ingestion.md) | Live odds ingestion: The Odds API | Accepted |
+| [0008](0008-team-name-reconciliation.md) | Team-name reconciliation for live odds | Accepted |
+| [0009](0009-paper-trading-bet-log.md) | Paper-trading bet log | Accepted |
 
 ## Format
 

@@ -16,7 +16,9 @@ dependencies = [
 
 [project.scripts]
 tipster-ingest = "tipster_core.ingest.cli:main"
+tipster-odds = "tipster_core.ingest.odds_cli:main"
 tipster-backtest = "tipster_core.backtest.cli:main"
+tipster-bets = "tipster_core.bet_log_cli:main"
 
 [build-system]
 requires = ["hatchling"]

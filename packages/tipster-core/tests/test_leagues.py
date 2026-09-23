@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 
 from tipster_core.leagues import (
     BIG_5,
     LeagueCode,
     season_code,
+    season_from_date,
     season_label,
     validate_season,
 )
@@ -44,3 +47,12 @@ def test_big_5_contents() -> None:
     assert len(BIG_5) == 5
     assert LeagueCode.PREMIER_LEAGUE in BIG_5
     assert LeagueCode.EREDIVISIE not in BIG_5
+
+
+def test_season_from_date_mid_season() -> None:
+    assert season_from_date(date(2026, 1, 15)) == "2526"
+
+
+def test_season_from_date_july_cutoff() -> None:
+    assert season_from_date(date(2025, 7, 1)) == "2526"
+    assert season_from_date(date(2025, 6, 30)) == "2425"

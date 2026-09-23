@@ -24,15 +24,14 @@ import json
 from collections.abc import Sequence
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any
 
 import polars as pl
 
 from tipster_core.backtest.harness import BacktestConfig, run_backtest
 from tipster_core.backtest.results import BacktestReport
-from tipster_core.contracts import MatchOdds, MatchResult, OutcomeOdds
+from tipster_core.contracts import MatchResult
 from tipster_core.leagues import BIG_5, LeagueCode
-from tipster_core.storage import DEFAULT_DB_PATH, connect, load_matches
+from tipster_core.storage import DEFAULT_DB_PATH, connect, load_match_results
 
 DEFAULT_ARMS = "gbm-poisson,dixon-coles,closing-favourite"
 DEFAULT_OUT = Path("data") / "backtests"
@@ -104,55 +103,14 @@ def _split(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-def _odds_from_row(row: dict[str, Any]) -> MatchOdds | None:
-    """Build the MatchOdds from the frame's 24 odds columns, if any group is full."""
-
-    def outcome(source: str, closing: str) -> OutcomeOdds | None:
-        home, draw, away = (
-            row[f"odds_{source}{closing}_h"],
-            row[f"odds_{source}{closing}_d"],
-            row[f"odds_{source}{closing}_a"],
-        )
-        if home is None or draw is None or away is None:
-            return None
-        return OutcomeOdds(home=float(home), draw=float(draw), away=float(away))
-
-    odds = MatchOdds(
-        b365=outcome("b365", ""),
-        pinnacle=outcome("pinnacle", ""),
-        avg=outcome("avg", ""),
-        max=outcome("max", ""),
-        b365_closing=outcome("b365", "_c"),
-        pinnacle_closing=outcome("pinnacle", "_c"),
-        avg_closing=outcome("avg", "_c"),
-        max_closing=outcome("max", "_c"),
-    )
-    if all(getattr(odds, attr) is None for attr in MatchOdds.model_fields):
-        return None
-    return odds
-
-
 def _load_results(args: argparse.Namespace) -> list[MatchResult]:
     leagues = [LeagueCode.from_code(code) for code in _split(args.leagues)]
     seasons = _split(args.seasons) or None
     con = connect(args.db, read_only=True)
     try:
-        frame = load_matches(con, leagues=leagues, seasons=seasons)
+        return load_match_results(con, leagues=leagues, seasons=seasons)
     finally:
         con.close()
-    return [
-        MatchResult(
-            league=row["league"],
-            season=row["season"],
-            date=row["date"],
-            home_team=row["home_team"],
-            away_team=row["away_team"],
-            home_goals=row["home_goals"],
-            away_goals=row["away_goals"],
-            odds=_odds_from_row(row),
-        )
-        for row in frame.iter_rows(named=True)
-    ]
 
 
 def _print_report(report: BacktestReport) -> None:

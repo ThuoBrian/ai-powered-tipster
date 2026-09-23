@@ -7,13 +7,15 @@ the ingest layer. The schema mirrors the canonical column order produced by
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Any
 
 import duckdb
 import polars as pl
 from duckdb import DuckDBPyConnection
 
+from tipster_core.contracts import MatchOdds, MatchResult, OutcomeOdds
 from tipster_core.leagues import LeagueCode
 
 DEFAULT_DB_PATH = Path("data") / "tipster.duckdb"
@@ -163,3 +165,58 @@ def load_matches(
         pl.col("home_goals").cast(pl.Int64),
         pl.col("away_goals").cast(pl.Int64),
     )
+
+
+def _odds_from_row(row: Mapping[str, Any]) -> MatchOdds | None:
+    """Build the MatchOdds from a ``load_matches`` row's 24 odds columns, if any group is full."""
+
+    def outcome(source: str, closing: str) -> OutcomeOdds | None:
+        home, draw, away = (
+            row[f"odds_{source}{closing}_h"],
+            row[f"odds_{source}{closing}_d"],
+            row[f"odds_{source}{closing}_a"],
+        )
+        if home is None or draw is None or away is None:
+            return None
+        return OutcomeOdds(home=float(home), draw=float(draw), away=float(away))
+
+    odds = MatchOdds(
+        b365=outcome("b365", ""),
+        pinnacle=outcome("pinnacle", ""),
+        avg=outcome("avg", ""),
+        max=outcome("max", ""),
+        b365_closing=outcome("b365", "_c"),
+        pinnacle_closing=outcome("pinnacle", "_c"),
+        avg_closing=outcome("avg", "_c"),
+        max_closing=outcome("max", "_c"),
+    )
+    if all(getattr(odds, attr) is None for attr in MatchOdds.model_fields):
+        return None
+    return odds
+
+
+def load_match_results(
+    con: DuckDBPyConnection,
+    leagues: Sequence[LeagueCode] | None = None,
+    seasons: Sequence[str] | None = None,
+) -> list[MatchResult]:
+    """``load_matches``, converted into domain ``MatchResult`` objects.
+
+    The modelling and value-engine entry points want typed contracts, not a
+    raw frame; this is the one place that conversion happens; consumers
+    should call this rather than each hand-rolling ``_odds_from_row``.
+    """
+    frame = load_matches(con, leagues=leagues, seasons=seasons)
+    return [
+        MatchResult(
+            league=row["league"],
+            season=row["season"],
+            date=row["date"],
+            home_team=row["home_team"],
+            away_team=row["away_team"],
+            home_goals=row["home_goals"],
+            away_goals=row["away_goals"],
+            odds=_odds_from_row(row),
+        )
+        for row in frame.iter_rows(named=True)
+    ]
