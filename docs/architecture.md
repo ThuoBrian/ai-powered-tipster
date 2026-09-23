@@ -23,7 +23,7 @@ ai-powered-tipster/
 │   ├── onboarding.md        # Project registry + getting started
 │   └── decisions/           # ADRs
 ├── data/                    # LOCAL ONLY (gitignored): DuckDB + raw CSVs
-├── Makefile                 # make setup / make check + per-project targets
+├── justfile                 # just start / just check + per-project recipes
 └── pyproject.toml           # uv workspace root, shared tool config
 ```
 
@@ -38,11 +38,11 @@ ai-powered-tipster/
 ## Toolchain
 
 - **uv** is the only package manager (workspace + lockfile, committed).
-- **ruff** lints and formats everything (`make lint`, `make format`).
-- **mypy** type-checks all package/app sources (`make typecheck`).
-- **pytest** runs the test suite (`make test`).
+- **ruff** lints and formats everything (`just lint`, `just format`).
+- **mypy** type-checks all package/app sources (`just typecheck`).
+- **pytest** runs the test suite (`just test`).
 - **pre-commit** runs the repo-wide, language-agnostic hygiene gate
-  (`make check` includes it).
+  (`just check` includes it).
 - **CI** (`.github/workflows/ci.yml`) runs the hygiene gate plus a Python
   job (uv sync, ruff, mypy, pytest) on every push and PR.
 
@@ -50,7 +50,7 @@ ai-powered-tipster/
 
 | Component | How it runs | Notes |
 |-----------|--------------|-------|
-| tipster-ui | `make run-ui` | Streamlit on localhost:8501 |
-| tipster-ingest CLI | `make ingest` | Fills `data/tipster.duckdb` |
-| tipster-backtest CLI | `make backtest` | Walk-forward eval over `data/tipster.duckdb`; artifacts in `data/backtests/run-*/` |
+| tipster-ui | `just run-ui` | Streamlit on localhost:8501 |
+| tipster-ingest CLI | `just ingest` | Fills `data/tipster.duckdb` |
+| tipster-backtest CLI | `just backtest` | Walk-forward eval over `data/tipster.duckdb`; artifacts in `data/backtests/run-*/` |
 | predictor service | Not yet ported | See `services/predictor/README.md` |

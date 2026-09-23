@@ -70,15 +70,26 @@ class EloBook:
         return self.ratings.get(key, self.start)
 
     def apply(
-        self, league: LeagueCode, home_team: str, away_team: str, home_goals: int, away_goals: int
+        self,
+        league: LeagueCode,
+        home_team: str,
+        away_team: str,
+        home_goals: int,
+        away_goals: int,
+        *,
+        neutral: bool = False,
     ) -> None:
-        """Update both teams' ratings after one played match."""
+        """Update both teams' ratings after one played match.
+
+        At a neutral venue the "home" side gets no home-advantage bonus.
+        """
         home_key = (league, home_team)
         away_key = (league, away_team)
         home_elo = self._rating(home_key)
         away_elo = self._rating(away_key)
 
-        expected_home = expected_score(home_elo + self.home_advantage, away_elo)
+        bonus = 0.0 if neutral else self.home_advantage
+        expected_home = expected_score(home_elo + bonus, away_elo)
         score_home, score_away = _points(home_goals, away_goals)
         k = self.base_k * k_multiplier(home_goals - away_goals)
 
@@ -91,6 +102,7 @@ class EloBook:
         Requires ``league, date, home_team, away_team, home_goals,
         away_goals`` — the goal columns may be null (fixture rows), in
         which case the row is snapshotted but never applied to the replay.
+        An optional ``neutral`` column removes home advantage for that row.
         Rows are processed by date; all rows on a date are snapshotted
         *before* that date's matches are applied, enforcing the strict
         ``date <`` rule. Returns the input columns plus ``home_elo_pre`` /
@@ -130,6 +142,7 @@ class EloBook:
                     row["away_team"],
                     row["home_goals"],
                     row["away_goals"],
+                    neutral=bool(row.get("neutral")),
                 )
 
         elo_frame = pl.DataFrame(

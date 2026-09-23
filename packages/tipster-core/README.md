@@ -7,12 +7,12 @@ frameworks and no service code (dependency rules live in
 
 ## Install, run, test
 
-Everything runs through the repo workspace (`make setup` at the root). This
+Everything runs through the repo workspace (`just setup` at the root). This
 package's targets:
 
 ```bash
-make tipster-core-test    # pytest for this package only
-make tipster-core-ingest  # big-5 leagues, 2024/25 → 2026/27, into data/tipster.duckdb
+just tipster-core-test    # pytest for this package only
+just tipster-core-ingest  # big-5 leagues, 2024/25 → 2026/27, into data/tipster.duckdb
 ```
 
 The CLI is also directly usable for narrower pulls:

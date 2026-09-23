@@ -58,6 +58,8 @@ class MatchResult(BaseModel):
     home_goals: int = Field(ge=0)
     away_goals: int = Field(ge=0)
     odds: MatchOdds | None = None
+    #: Played at a neutral venue: the "home" side gets no home advantage.
+    neutral: bool = False
 
     @field_validator("season")
     @classmethod
@@ -83,6 +85,7 @@ class MatchResult(BaseModel):
             date=self.date,
             home_team=self.home_team,
             away_team=self.away_team,
+            neutral=self.neutral,
         )
 
 
@@ -102,6 +105,7 @@ class Fixture(BaseModel):
     date: date
     home_team: str = Field(min_length=1)
     away_team: str = Field(min_length=1)
+    neutral: bool = False
 
     @field_validator("season")
     @classmethod

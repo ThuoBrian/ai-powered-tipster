@@ -20,8 +20,9 @@ from scipy.optimize import brentq
 
 from tipster_core.contracts import Fixture, MarketProbabilities, MatchOdds, OutcomeOdds
 
-#: Which of ``MatchOdds``'s (non-closing) fields to read a price from.
-OddsSource = Literal["pinnacle", "avg", "b365", "max"]
+#: Where a tip's price came from: one of ``MatchOdds``'s (non-closing) fields,
+#: or ``"manual"`` for odds a user typed in (never a ``MatchOdds`` field).
+OddsSource = Literal["pinnacle", "avg", "b365", "max", "manual"]
 
 #: Fallback order when no source is requested (ADR 0005's CLV "taken" ladder).
 _ODDS_LADDER: tuple[OddsSource, ...] = ("pinnacle", "avg", "b365", "max")

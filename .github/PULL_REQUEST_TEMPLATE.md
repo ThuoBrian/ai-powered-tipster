@@ -8,7 +8,7 @@
 
 ## Checklist
 
-- [ ] `make check` passes locally
+- [ ] `just check` passes locally
 - [ ] Tests added for new features / regression tests for bug fixes
 - [ ] No secrets, credentials, or `.env` files included
 - [ ] Docs updated where behavior changed (`README.md`, `docs/`, ADRs)

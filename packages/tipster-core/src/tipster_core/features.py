@@ -21,6 +21,7 @@ Feature list (18, home perspective — away side mirrors):
 - ``{side}_matches_played``: prior-match count (lets the GBM discount
   cold-start rows toward the priors)
 - ``league_code``: league identity, a LightGBM categorical
+- ``neutral``: played at a neutral venue (no home advantage in ``elo_diff``)
 
 Cold start (no history): rolling stats fall back to the league's average
 goals (computed only from pre-date matches), then to ``prior_goals``; Elo
@@ -59,9 +60,17 @@ FEATURE_COLUMNS: tuple[str, ...] = (
     "away_matches_played",
     "elo_diff",
     "league_code",
+    "neutral",
 )
 
 _LEAGUE_CODE_INDEX: dict[str, int] = {member.value: i for i, member in enumerate(LeagueCode)}
+
+
+def _neutral(frame: pl.DataFrame) -> pl.Expr:
+    """The optional ``neutral`` flag (ADR 0011); absent means a normal home match."""
+    if "neutral" in frame.columns:
+        return pl.col("neutral").fill_null(False).cast(pl.Boolean)
+    return pl.lit(False)
 
 
 @dataclass(frozen=True)
@@ -282,6 +291,7 @@ def _elo_features(
                 away_team=pl.col("away_team"),
                 home_goals=pl.col("home_goals"),
                 away_goals=pl.col("away_goals"),
+                neutral=_neutral(history),
                 kind=pl.lit("history"),
             ),
             fixtures.select(
@@ -292,6 +302,7 @@ def _elo_features(
                 away_team=pl.col("away_team"),
                 home_goals=pl.lit(None, dtype=pl.Int64),
                 away_goals=pl.lit(None, dtype=pl.Int64),
+                neutral=_neutral(fixtures),
                 kind=pl.lit("fixture"),
             ),
         ],
@@ -335,7 +346,9 @@ def build_features(
             if name != "league_code"
         ).with_columns(pl.lit(None, dtype=pl.Int32).alias("league_code"))
 
-    fixture_core = identity.select("fixture_id", "league", "date", "home_team", "away_team")
+    fixture_core = identity.select(
+        "fixture_id", "league", "date", "home_team", "away_team", neutral=_neutral(identity)
+    )
     form = _appearances(history, config)
 
     features = (
@@ -364,7 +377,9 @@ def build_features(
         away_matches_played=pl.col("away_matches_played").fill_null(0),
     )
     features = features.with_columns(
-        elo_diff=pl.col("home_elo") + config.elo_home_advantage - pl.col("away_elo"),
+        elo_diff=pl.col("home_elo")
+        + pl.when(pl.col("neutral")).then(0.0).otherwise(config.elo_home_advantage)
+        - pl.col("away_elo"),
     )
     for side in ("home", "away"):
         venue = "home" if side == "home" else "away"

@@ -59,9 +59,10 @@ class _LeagueParams:
     rho: float = 0.0
     teams: tuple[str, ...] = ()
 
-    def lambda_home(self, home_team: str, away_team: str) -> float:
+    def lambda_home(self, home_team: str, away_team: str, *, neutral: bool = False) -> float:
         rate = self.attack.get(home_team, 0.0) + self.defense.get(away_team, 0.0)
-        return float(np.clip(math.exp(rate + self.gamma), 1e-3, _LAMBDA_CEILING))
+        gamma = 0.0 if neutral else self.gamma
+        return float(np.clip(math.exp(rate + gamma), 1e-3, _LAMBDA_CEILING))
 
     def lambda_away(self, home_team: str, away_team: str) -> float:
         rate = self.attack.get(away_team, 0.0) + self.defense.get(home_team, 0.0)
@@ -78,6 +79,7 @@ def _negative_log_likelihood(
     weights: np.ndarray,
     log_factorial: np.ndarray,
     ridge: float,
+    home_factor: np.ndarray,
 ) -> float:
     """Weighted DC negative log-likelihood, vectorised over matches.
 
@@ -86,6 +88,8 @@ def _negative_log_likelihood(
     sum-to-zero constraint. ``n_teams`` is the count of distinct teams
     (a team that never appears at home would make ``home_idx.max()``
     undercount). The ridge term keeps the MLE finite on degenerate slices.
+    ``home_factor`` is 0 for neutral-venue matches, 1 otherwise, so home
+    advantage (``gamma``) only applies where there is a real home side.
     """
     attack_params = params[: n_teams - 1]
     defense_params = params[n_teams - 1 : 2 * n_teams - 2]
@@ -94,7 +98,7 @@ def _negative_log_likelihood(
     gamma = params[-2]
     rho = params[-1]
 
-    lambda_home = np.exp(attack[home_idx] + defense[away_idx] + gamma)
+    lambda_home = np.exp(attack[home_idx] + defense[away_idx] + gamma * home_factor)
     lambda_away = np.exp(attack[away_idx] + defense[home_idx])
 
     log_p = (
@@ -143,6 +147,7 @@ class DixonColesPredictor:
                 "away_team": [match.away_team for match in played],
                 "home_goals": [match.home_goals for match in played],
                 "away_goals": [match.away_goals for match in played],
+                "neutral": [match.neutral for match in played],
             }
         )
         self._params = {}
@@ -162,6 +167,7 @@ class DixonColesPredictor:
         away_idx = np.array([index[t] for t in league_frame["away_team"]], dtype=np.int64)
         home_goals = league_frame["home_goals"].to_numpy().astype(np.int64)
         away_goals = league_frame["away_goals"].to_numpy().astype(np.int64)
+        home_factor = 1.0 - league_frame["neutral"].to_numpy().astype(np.float64)
 
         reference = league_frame["date"].max()
         days_ago = np.array([(reference - d).days for d in league_frame["date"]], dtype=np.float64)
@@ -190,6 +196,7 @@ class DixonColesPredictor:
                 weights,
                 log_factorial,
                 self.config.ridge,
+                home_factor,
             ),
             method="L-BFGS-B",
             bounds=bounds,
@@ -217,7 +224,7 @@ class DixonColesPredictor:
         for fixture in upcoming:
             params = self._params.get(fixture.league, _LeagueParams())
             matrix = score_matrix(
-                params.lambda_home(fixture.home_team, fixture.away_team),
+                params.lambda_home(fixture.home_team, fixture.away_team, neutral=fixture.neutral),
                 params.lambda_away(fixture.home_team, fixture.away_team),
                 rho=params.rho,
             )

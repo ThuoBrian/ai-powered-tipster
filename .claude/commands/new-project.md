@@ -15,7 +15,7 @@ Then:
    `.env.example`, never real secrets).
 3. Add `.gitignore` entries for its build artifacts at the repo root if
    they're not covered yet.
-4. Add Makefile targets `install`, `test`, `run` prefixed with the project
+4. Add justfile recipes `install`, `test`, `run` prefixed with the project
    name (e.g. `my-project-test`), wired to the project's own tooling.
 5. Register the project in `docs/onboarding.md` (project table) and add it
    to the system map in `docs/architecture.md`.

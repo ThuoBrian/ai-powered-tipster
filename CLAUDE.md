@@ -13,15 +13,16 @@ surfaces positive-EV tips with LLM-written reasoning. Core principle:
 
 | Task | Command |
 |------|---------|
-| One-time setup (deps + hooks) | `make setup` |
-| The gate (hygiene + lint + types + tests) | `make check` |
-| Tests only | `make test` (or `make tipster-core-test`) |
-| Lint / auto-fix | `make lint` / `make format` |
-| Typecheck | `make typecheck` |
-| Ingest data | `make ingest` (football-data.co.uk → `data/tipster.duckdb`) |
-| Dashboard | `make run-ui` (Streamlit, localhost:8501) |
+| First run → dashboard (sync, ingest if no DB, UI) | `just start` |
+| One-time setup (deps + hooks) | `just setup` |
+| The gate (hygiene + lint + types + tests) | `just check` |
+| Tests only | `just test` (or `just tipster-core-test`) |
+| Lint / auto-fix | `just lint` / `just format` |
+| Typecheck | `just typecheck` |
+| Ingest data | `just ingest` (football-data.co.uk → `data/tipster.duckdb`) |
+| Dashboard | `just run-ui` (Streamlit, localhost:8501) |
 
-Always run commands through `uv run` (the Makefile does). Never use raw pip.
+Always run commands through `uv run` (the justfile does). Never use raw pip.
 
 ## Rules
 

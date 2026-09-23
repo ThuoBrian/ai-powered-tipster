@@ -54,6 +54,11 @@ _MIN_CALIBRATION_ROWS = 20
 
 _EPS = 1e-12
 
+#: Calibrated probabilities stay within [floor, 1 - floor]. Sparse bins make
+#: isotonic regression learn hard 0s/1s (a 0% away win), which the 1X2
+#: renormalisation then turns into an inflated favourite — and a fake edge.
+_PROB_FLOOR = 0.02
+
 
 def _outcome(pair: tuple[int, int], family: str) -> float:
     home_goals, away_goals = pair
@@ -111,16 +116,26 @@ def _calibrated_markets(
 
 
 class CalibratedPredictor:
-    """Wraps any :class:`Predictor` with per-family isotonic calibration."""
+    """Wraps any :class:`Predictor` with per-family isotonic calibration.
 
-    def __init__(self, inner: Predictor, n_folds: int = 4) -> None:
+    ``calibrate_1x2=False`` calibrates only the goal markets (over 2.5,
+    BTTS) and passes home/draw/away through untouched. On the 2026-09-23
+    walk-forward, isotonic 1X2 calibration of Dixon-Coles lost on log loss
+    in 2 of 3 leagues, flattened small leagues toward the base rate, and
+    broke neutral-venue symmetry (separate home and away curves), while
+    goal-market calibration won everywhere (ADR 0011).
+    """
+
+    def __init__(self, inner: Predictor, n_folds: int = 4, *, calibrate_1x2: bool = True) -> None:
         self.inner = inner
         self.n_folds = n_folds
+        self.calibrate_1x2 = calibrate_1x2
         self._calibrators: dict[str, IsotonicRegression] | None = None
 
     @property
     def name(self) -> str:
-        return f"{self.inner.name}-calibrated"
+        suffix = "calibrated" if self.calibrate_1x2 else "calibrated-goals"
+        return f"{self.inner.name}-{suffix}"
 
     def fit(self, played: Sequence[MatchResult]) -> None:
         """Fit calibrators out-of-fold, then the inner model on the full corpus."""
@@ -151,6 +166,8 @@ class CalibratedPredictor:
 
         calibrators: dict[str, IsotonicRegression] = {}
         for family, _ in _BINARY_FAMILIES:
+            if not self.calibrate_1x2 and family in ("home", "draw", "away"):
+                continue  # passes through raw in _calibrated_markets
             predicted: list[float] = []
             observed: list[float] = []
             for prediction, match in out_of_fold:
@@ -163,7 +180,9 @@ class CalibratedPredictor:
                 }
                 predicted.append(max(values[family], _EPS))
                 observed.append(_outcome((match.home_goals, match.away_goals), family))
-            regressor = IsotonicRegression(y_min=0.0, y_max=1.0, out_of_bounds="clip")
+            regressor = IsotonicRegression(
+                y_min=_PROB_FLOOR, y_max=1.0 - _PROB_FLOOR, out_of_bounds="clip"
+            )
             regressor.fit(predicted, observed)
             calibrators[family] = regressor
         self._calibrators = calibrators

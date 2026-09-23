@@ -11,13 +11,13 @@ From the repo root (the app resolves `data/tipster.duckdb` relative to the
 working directory):
 
 ```bash
-make tipster-ui-run        # or the alias: make run-ui
+just tipster-ui-run        # or the alias: just run-ui
 ```
 
 ## Test
 
 No UI-specific tests yet — the domain logic it renders is covered by
-`tipster-core`'s suite (`make tipster-core-test`). The app also boots
+`tipster-core`'s suite (`just tipster-core-test`). The app also boots
 headless for smoke checks:
 
 ```bash

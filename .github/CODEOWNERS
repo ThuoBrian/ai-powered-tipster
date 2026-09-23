@@ -7,5 +7,5 @@
 # Repo-wide conventions and CI need a maintainer's eye
 /docs/        @your-username
 /.github/     @your-username
-/Makefile     @your-username
+/justfile     @your-username
 /CLAUDE.md    @your-username

@@ -34,6 +34,8 @@ _ALIASES: dict[tuple[LeagueCode, str], str] = {
     (LeagueCode.PREMIER_LEAGUE, "Norwich City"): "Norwich",
     (LeagueCode.PREMIER_LEAGUE, "AFC Bournemouth"): "Bournemouth",
     (LeagueCode.PREMIER_LEAGUE, "Ipswich Town"): "Ipswich",
+    (LeagueCode.PREMIER_LEAGUE, "Coventry City"): "Coventry",  # verified 2026-09-23
+    (LeagueCode.PREMIER_LEAGUE, "Hull City"): "Hull",  # verified 2026-09-23
     # La Liga
     (LeagueCode.LA_LIGA, "Real Sociedad"): "Sociedad",
     (LeagueCode.LA_LIGA, "Athletic Bilbao"): "Ath Bilbao",
@@ -47,6 +49,13 @@ _ALIASES: dict[tuple[LeagueCode, str], str] = {
     (LeagueCode.LA_LIGA, "Celta Vigo"): "Celta",
     (LeagueCode.LA_LIGA, "Deportivo Alaves"): "Alaves",
     (LeagueCode.LA_LIGA, "Deportivo Alavés"): "Alaves",
+    # Verified against a live Odds API response, 2026-09-23:
+    (LeagueCode.LA_LIGA, "Alavés"): "Alaves",
+    (LeagueCode.LA_LIGA, "CA Osasuna"): "Osasuna",
+    (LeagueCode.LA_LIGA, "Deportivo La Coruña"): "La Coruna",
+    (LeagueCode.LA_LIGA, "Elche CF"): "Elche",
+    (LeagueCode.LA_LIGA, "Málaga"): "Malaga",
+    (LeagueCode.LA_LIGA, "Real Racing Club de Santander"): "Santander",
     # Bundesliga
     (LeagueCode.BUNDESLIGA, "FC Bayern München"): "Bayern Munich",
     (LeagueCode.BUNDESLIGA, "Borussia Dortmund"): "Dortmund",

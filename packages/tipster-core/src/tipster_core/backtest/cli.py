@@ -120,6 +120,7 @@ def _print_report(report: BacktestReport) -> None:
     )
     for name, arm in report.arms.items():
         print(f"\n[{name}] {arm.n_fixtures} fixtures")
+        print(f"  correct result (1X2): {arm.hit_rate_1x2:.1%} of fixtures")
         for family, metrics in arm.families.items():
             print(f"  {family:>14}: brier {metrics.brier:.4f}  log loss {metrics.log_loss:.4f}")
         print(
@@ -183,7 +184,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     results = _load_results(args)
     if not results:
-        print(f"No matches found in {args.db} — run `make ingest` first.")
+        print(f"No matches found in {args.db} — run `just ingest` first.")
         return 1
 
     config = BacktestConfig(

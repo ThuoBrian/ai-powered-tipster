@@ -131,8 +131,12 @@ paper-traded and logged (SQLite bet log, phase 2) until CLV says otherwise.
 
 ## Scope for v1
 
-- **Leagues:** Premier League plus the big five European leagues
-  (`E0, SP1, D1, I1, F1`).
+- **Leagues:** the big five European leagues (`E0, SP1, D1, I1, F1`) are
+  the backtest default. Since ADR 0011, about 40 competitions are
+  ingested and priceable: 22 football-data.co.uk divisions, 16 "extra"
+  countries (Brazil, USA, Japan, …), and national teams (`INT`: World Cup,
+  Euros, AFCON, Copa América, qualifiers, Nations League), with
+  neutral-venue handling.
 - **Markets:** 1X2, over/under 2.5, BTTS, correct score — all derived from
   one score matrix.
 - **Kenya angle:** compare sharp-line-calibrated prices against local book

@@ -4,27 +4,31 @@ Everything a newcomer (or a fresh agent session) needs to get productive.
 
 ## Getting started
 
+Just want the dashboard? `just start` syncs deps, downloads data on the
+first run, and opens it. The full contributor path:
+
 ```bash
-# 1. Install uv (one-time): https://docs.astral.sh/uv/
+# 1. Install uv and just (one-time): https://docs.astral.sh/uv/ ,
+#    winget install Casey.Just  (or: brew install just)
 # 2. Set up the workspace (deps + pre-commit hooks)
-make setup
+just setup
 
 # 3. Pull historical data into data/tipster.duckdb
-make ingest
+just ingest
 
 # 4. Run the checks (the gate: lint + types + tests)
-make check
+just check
 
 # 5. Run the walk-forward backtest (prints the model gate verdict)
-make backtest
+just backtest
 
 # 6. Launch the dashboard
-make run-ui
+just run-ui
 ```
 
-No environment variables are required yet. `.env.example` lists the keys
-later phases need (`THE_ODDS_API_KEY`, `FOOTBALL_DATA_API_KEY`) — copy to
-`.env` when you get there; `.env` is gitignored.
+Historical data needs no keys. For live odds, copy `.env.example` to `.env`
+and set `THE_ODDS_API_KEY`. Every `just` recipe loads `.env` automatically,
+and `.env` is gitignored.
 
 ## Project registry
 
@@ -40,13 +44,13 @@ later phases need (`THE_ODDS_API_KEY`, `FOOTBALL_DATA_API_KEY`) — copy to
 - Changes to data flow or schemas get a test; significant decisions get an
   ADR in `docs/decisions/`.
 - `data/` is local-only: DuckDB files and raw CSVs are never committed.
-- Makefile targets for a project are prefixed with its name
+- justfile recipes for a project are prefixed with its name
   (`tipster-core-test`, `tipster-ui-run`).
 
 ## Current state (2026-09)
 
 Phase 1 complete: feature builder, per-league Elo, GBM → Poisson hybrid
 (ADR 0003) with isotonic calibration, pure Dixon-Coles reference, and the
-walk-forward backtest harness (ADR 0005) — `make backtest` prints per-arm
+walk-forward backtest harness (ADR 0005) — `just backtest` prints per-arm
 Brier/log loss, ROI, CLV, and the gate verdict. Next: phase 2 — the value
 engine and LLM reasoning layer (see [design.md](design.md#roadmap)).

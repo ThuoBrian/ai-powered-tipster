@@ -18,7 +18,6 @@ import streamlit as st
 from tipster_core import bet_log
 from tipster_core.storage import DEFAULT_DB_PATH, connect, load_match_results
 
-st.set_page_config(page_title="Bet Log", layout="wide")
 st.title("Bet Log")
 st.caption(
     "Paper-traded tips: fractional-Kelly stake vs. a flat 1-unit control arm, "
@@ -29,7 +28,7 @@ con = bet_log.connect()
 
 if st.button("Settle pending bets now"):
     if not Path(DEFAULT_DB_PATH).exists():
-        st.warning("No matches database yet — run `make ingest` first.")
+        st.warning("No matches database yet — run `just ingest` first.")
     else:
         match_con = connect(DEFAULT_DB_PATH, read_only=True)
         try:

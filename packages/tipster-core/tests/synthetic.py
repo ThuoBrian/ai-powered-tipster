@@ -72,6 +72,7 @@ def synthetic_matches(
                     "away_team": teams[away_j],
                     "home_goals": home_goals,
                     "away_goals": away_goals,
+                    "neutral": False,
                     "source_file": f"synthetic/{league}-{season}.csv",
                 }
                 if with_odds:
@@ -129,6 +130,7 @@ def synthetic_matches(
         "away_team": pl.String,
         "home_goals": pl.Int64,
         "away_goals": pl.Int64,
+        "neutral": pl.Boolean,
         "source_file": pl.String,
         **{
             f"odds_{source}{closing}_{outcome}": pl.Float64
@@ -147,6 +149,7 @@ def synthetic_matches(
         "away_team",
         "home_goals",
         "away_goals",
+        "neutral",
         "source_file",
         *(
             f"odds_{source}{closing}_{outcome}"

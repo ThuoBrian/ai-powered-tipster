@@ -86,6 +86,37 @@ def test_gamma_captures_home_advantage(corpus) -> None:
     assert 0.8 < league_average_lambda < 3.0
 
 
+def test_neutral_venue_removes_home_advantage(corpus) -> None:
+    model = DixonColesPredictor()
+    model.fit(corpus)
+    a, b = corpus[-1].home_team, corpus[-1].away_team
+    day = corpus[-1].date
+
+    def fixture(home: str, away: str, neutral: bool) -> Fixture:
+        return Fixture(
+            league="E0", season="2425", date=day, home_team=home, away_team=away, neutral=neutral
+        )
+
+    at_home, a_v_b, b_v_a = model.predict(
+        [fixture(a, b, False), fixture(a, b, True), fixture(b, a, True)]
+    )
+    # Neutral: listing order doesn't matter — A's win chance is the same
+    # whether A is written first or second.
+    assert a_v_b.markets.home == pytest.approx(b_v_a.markets.away)
+    assert a_v_b.markets.draw == pytest.approx(b_v_a.markets.draw)
+    # And the fitted home advantage (gamma > 0) is gone.
+    assert at_home.markets.home > a_v_b.markets.home
+
+
+def test_neutral_matches_do_not_inflate_fitted_home_advantage(corpus) -> None:
+    # Relabelling every match neutral means there's no home side to learn
+    # from: gamma must shrink to (ridge-penalised) zero.
+    neutral_corpus = [m.model_copy(update={"neutral": True}) for m in corpus]
+    model = DixonColesPredictor()
+    model.fit(neutral_corpus)
+    assert model._params[LeagueCode.PREMIER_LEAGUE].gamma == pytest.approx(0.0, abs=1e-3)
+
+
 def test_tiny_separated_slice_stays_finite() -> None:
     """Degenerate slices (calibration folds) must not break the MLE.
 

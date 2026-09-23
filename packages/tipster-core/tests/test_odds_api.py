@@ -154,6 +154,40 @@ def test_season_inferred_from_commence_time() -> None:
 
 def test_odds_url_shape() -> None:
     assert odds_url(PL) == "https://api.the-odds-api.com/v4/sports/soccer_epl/odds"
+    assert odds_url(LeagueCode.INTERNATIONAL, "soccer_africa_cup_of_nations").endswith(
+        "/soccer_africa_cup_of_nations/odds"
+    )
+
+
+def test_odds_url_for_a_league_without_a_feed_is_a_clear_error() -> None:
+    with pytest.raises(ValueError, match="no live odds feed for League Two"):
+        odds_url(LeagueCode.LEAGUE_TWO)
+    with pytest.raises(ValueError, match="pick a tournament"):
+        odds_url(LeagueCode.INTERNATIONAL)
+
+
+def test_tournament_fixtures_can_be_marked_neutral() -> None:
+    payload = [_event(bookmakers=[_bookmaker("bet365", 1.85, 3.5, 4.0)])]
+    fixture, _odds = parse_odds_response(
+        json.dumps(payload).encode(), LeagueCode.INTERNATIONAL, neutral=True
+    )[0]
+    assert fixture.neutral is True
+    assert fixture.season == "2026"  # internationals use calendar-year seasons
+
+
+def test_active_sport_keys_keeps_only_in_season_feeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> list[dict]:
+            return [
+                {"key": "soccer_epl", "active": True},
+                {"key": "soccer_fifa_world_cup", "active": False},
+            ]
+
+    monkeypatch.setattr(odds_api.httpx, "get", lambda *a, **k: FakeResponse())
+    assert odds_api.active_sport_keys("test-key") == {"soccer_epl"}
 
 
 def test_fetch_odds_calls_the_odds_api(monkeypatch: pytest.MonkeyPatch) -> None:

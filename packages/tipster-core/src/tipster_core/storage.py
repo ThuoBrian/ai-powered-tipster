@@ -30,6 +30,7 @@ MATCHES_COLUMNS: tuple[tuple[str, str], ...] = (
     ("away_team", "VARCHAR NOT NULL"),
     ("home_goals", "INTEGER NOT NULL"),
     ("away_goals", "INTEGER NOT NULL"),
+    ("neutral", "BOOLEAN DEFAULT FALSE"),
     ("odds_b365_h", "DOUBLE"),
     ("odds_b365_d", "DOUBLE"),
     ("odds_b365_a", "DOUBLE"),
@@ -84,7 +85,17 @@ def connect(
     con = duckdb.connect(path, read_only=read_only)
     if not read_only:
         con.execute(MATCHES_DDL)
+        # Databases created before neutral venues existed (ADR 0011).
+        con.execute("ALTER TABLE matches ADD COLUMN IF NOT EXISTS neutral BOOLEAN DEFAULT FALSE")
     return con
+
+
+def _has_column(con: DuckDBPyConnection, column: str) -> bool:
+    rows = con.execute(
+        "SELECT 1 FROM information_schema.columns WHERE table_name = 'matches' AND column_name = ?",
+        [column],
+    ).fetchall()
+    return bool(rows)
 
 
 def replace_season(con: DuckDBPyConnection, matches: pl.DataFrame) -> int:
@@ -127,12 +138,28 @@ def match_counts(con: DuckDBPyConnection) -> list[tuple[str, str, int]]:
     return [(str(r[0]), str(r[1]), int(r[2])) for r in rows]
 
 
-def recent_matches(con: DuckDBPyConnection, n: int = 20) -> pl.DataFrame:
-    """The *n* most recent matches with core columns, as a polars frame."""
+def league_summary(con: DuckDBPyConnection) -> pl.DataFrame:
+    """One row per league: seasons, matches, first/last match date, last ingest time."""
+    return con.execute(
+        "SELECT league, count(DISTINCT season) AS seasons, count(*) AS matches,"
+        " min(date) AS first_date, max(date) AS last_date, max(ingested_at) AS last_ingest"
+        " FROM matches GROUP BY league ORDER BY league"
+    ).pl()
+
+
+def recent_matches(
+    con: DuckDBPyConnection, n: int = 20, leagues: Sequence[LeagueCode] | None = None
+) -> pl.DataFrame:
+    """The *n* most recent matches with core columns, optionally for some leagues only."""
+    where = ""
+    params: list[object] = []
+    if leagues:
+        where = " WHERE league IN (" + ", ".join("?" for _ in leagues) + ")"
+        params.extend(league.value for league in leagues)
     return con.execute(
         "SELECT league, season, date, home_team, away_team, home_goals, away_goals"
-        " FROM matches ORDER BY date DESC, league LIMIT ?",
-        [n],
+        f" FROM matches{where} ORDER BY date DESC, league LIMIT ?",
+        [*params, n],
     ).pl()
 
 
@@ -146,7 +173,10 @@ def load_matches(
     Optional *leagues* / *seasons* filters take football-data.co.uk codes.
     Dates are returned as ``pl.Date``; goal columns are non-null.
     """
-    query = f"SELECT {', '.join(name for name in _FRAME_COLUMNS)} FROM matches"
+    # A read-only connection can't migrate an older database (see connect()).
+    neutral = "neutral" if _has_column(con, "neutral") else "FALSE AS neutral"
+    columns = [neutral if name == "neutral" else name for name in _FRAME_COLUMNS]
+    query = f"SELECT {', '.join(columns)} FROM matches"
     conditions: list[str] = []
     params: list[str] = []
     if leagues:
@@ -217,6 +247,7 @@ def load_match_results(
             home_goals=row["home_goals"],
             away_goals=row["away_goals"],
             odds=_odds_from_row(row),
+            neutral=bool(row["neutral"]),
         )
         for row in frame.iter_rows(named=True)
     ]

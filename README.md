@@ -1,28 +1,35 @@
 # AI-Powered Football Tipster
 
-Value-betting engine for European football: a GBM → Poisson hybrid prices
-every match as a full scoreline distribution, bookmaker odds are stripped of
-their margin and compared against those probabilities, and only positive-EV
-tips are surfaced — each explained by a locally-run LLM. Streamlit dashboard,
-DuckDB storage, fully reproducible from free data.
+Value-betting engine for club and international football — about 40
+competitions, from the Premier League to Brazil's Série A to the World Cup
+and AFCON. A Poisson score model prices every match as a full scoreline
+distribution, bookmaker odds are stripped of their margin and compared
+against those probabilities, and only positive-EV tips are surfaced.
+Streamlit dashboard, DuckDB storage, fully reproducible from free data.
 
-**Status: phase 0** — historical ingest and the dashboard's data-status page
-are live. The model, backtester, and value finder land in phases 1–2 (see
+**Status: phase 2** — the model, walk-forward backtester, value finder, and
+paper-trading bet log are live. The LLM reasoning layer is phase 3 (see
 [docs/design.md](docs/design.md#roadmap)).
 
 ## Quick start
 
-Requires [uv](https://docs.astral.sh/uv/) (Python ≥ 3.12 is managed for you).
+Requires [uv](https://docs.astral.sh/uv/) (Python ≥ 3.12 is managed for you)
+and [just](https://just.systems/) (`winget install Casey.Just`, `brew install just`).
 
 ```bash
-make setup    # workspace deps + pre-commit hooks
-make ingest   # big-5 European leagues, 2024/25 → 2026/27 → data/tipster.duckdb
-make run-ui   # Streamlit dashboard on http://localhost:8501
-make check    # the gate: hygiene + lint + types + tests
+just start    # sync deps, download data on first run, open http://localhost:8501
 ```
 
-No API keys needed yet — phase 0 runs entirely on free data. Keys later
-phases use are listed in [`.env.example`](.env.example).
+That's it. The first run downloads about 40 competitions (league and
+international results, a few minutes) into `data/tipster.duckdb`; later
+runs go straight to the dashboard. Run `just ingest` whenever you want the
+latest results.
+
+For live odds, copy `.env.example` to `.env` and set `THE_ODDS_API_KEY`
+(free tier from [The Odds API](https://the-odds-api.com/)). Every `just`
+recipe loads `.env` automatically. Run `just` with no arguments to list
+every recipe. Contributors should also run `just setup` (pre-commit hooks)
+and `just check` (the gate).
 
 ## How it works
 
@@ -59,11 +66,11 @@ code, never data.
 - [Design](docs/design.md) — the full system design
 - [Architecture](docs/architecture.md) — repo map and dependency rules
 - [Onboarding](docs/onboarding.md) — getting started and project registry
-- [Decision records](docs/decisions/README.md) — ADRs 0001–0004
+- [Decision records](docs/decisions/README.md) — ADRs 0001–0010
 
 ## Contributing
 
-`make check` must pass. Significant decisions get an ADR in
+`just check` must pass. Significant decisions get an ADR in
 `docs/decisions/`. Conventional commits (`feat:`, `fix:`, `docs:`, `chore:`).
 
 ## License

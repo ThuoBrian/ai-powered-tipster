@@ -3,6 +3,9 @@
 Source format notes (ADR 0002):
 
 - CSVs live at ``https://www.football-data.co.uk/mmz4281/{season}/{league}.csv``
+- "Extra leagues" (ADR 0011) are one file per country at
+  ``new/{CODE}.csv``, every season, with ``Home``/``Away``/``HG``/``AG``,
+  a ``Season`` column, a UTF-8 BOM, and closing odds only.
 - Column sets drift between seasons; every odds column is optional.
 - Dates appear as ``dd/mm/yyyy`` or ``dd/mm/yy`` depending on the season.
 - Missing odds are blank cells; a literal ``0`` also means missing.
@@ -15,13 +18,19 @@ from __future__ import annotations
 
 import io
 from collections.abc import Mapping
+from datetime import date
 
 import httpx
 import polars as pl
 
-from tipster_core.leagues import LeagueCode, validate_season
+from tipster_core.leagues import EXTRA_LEAGUES, LeagueCode, validate_season
 
 BASE_URL = "https://www.football-data.co.uk/mmz4281/{season}/{league}.csv"
+EXTRA_URL = "https://www.football-data.co.uk/new/{league}.csv"
+
+#: Earliest match kept from the all-seasons extra-league files: roughly the
+#: same ~3 seasons of history the main-league default ingests.
+EXTRA_SINCE = date(2023, 1, 1)
 
 _SOURCES = ("b365", "pinnacle", "avg", "max")
 _OUTCOMES = ("h", "d", "a")
@@ -50,6 +59,7 @@ COLUMN_MAP: Mapping[str, str] = {
 }
 
 _REQUIRED_SOURCE_COLUMNS = {"Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG"}
+_REQUIRED_EXTRA_COLUMNS = {"Season", "Date", "Home", "Away", "HG", "AG"}
 
 
 def csv_url(league: LeagueCode, season: str) -> str:
@@ -58,12 +68,16 @@ def csv_url(league: LeagueCode, season: str) -> str:
     return BASE_URL.format(season=season, league=league.value)
 
 
-def download_csv(url: str, *, timeout: float = 30.0) -> bytes:
-    """Download one CSV, guarding against HTML error pages masquerading as 200s."""
+def download_csv(url: str, *, timeout: float = 30.0, marker: bytes = b"HomeTeam") -> bytes:
+    """Download one CSV, guarding against HTML error pages masquerading as 200s.
+
+    *marker* is a header name the real file must contain (``b"Home"`` for
+    the extra-league files).
+    """
     response = httpx.get(url, timeout=timeout, follow_redirects=True)
     response.raise_for_status()
     content = response.content
-    if b"HomeTeam" not in content[:8192]:
+    if marker not in content[:8192]:
         msg = f"{url} did not return a football-data.co.uk CSV"
         raise ValueError(msg)
     return content
@@ -93,13 +107,72 @@ def parse_matches_csv(
         raise ValueError(msg)
 
     df = raw.with_columns(
+        pl.lit(season).alias("season"),
         pl.col("HomeTeam").str.strip_chars().alias("home_team"),
         pl.col("AwayTeam").str.strip_chars().alias("away_team"),
         _parse_dates(pl.col("Date")).alias("date"),
         pl.col("FTHG").cast(pl.Int64, strict=False).alias("home_goals"),
         pl.col("FTAG").cast(pl.Int64, strict=False).alias("away_goals"),
-    ).filter(
-        pl.col("home_team").is_not_null()
+    )
+    return _canonical(df, league, source_file, f"{league.value} {season}")
+
+
+def extra_csv_url(league: LeagueCode) -> str:
+    """Return the all-seasons URL for one of the "extra leagues" (e.g. ``BRA``)."""
+    if league not in EXTRA_LEAGUES:
+        msg = f"{league.value} is not a football-data.co.uk extra league"
+        raise ValueError(msg)
+    return EXTRA_URL.format(league=league.value)
+
+
+def parse_extra_csv(
+    content: bytes,
+    league: LeagueCode,
+    *,
+    since: date = EXTRA_SINCE,
+    source_file: str | None = None,
+) -> pl.DataFrame:
+    """Parse an extra-league CSV (every season in one file) into the canonical schema.
+
+    The file carries its own ``Season`` column (``2026`` or ``2025/2026``)
+    and closing odds only; opening-odds columns come out null. Matches
+    before *since* are dropped.
+    """
+    raw = pl.read_csv(
+        io.StringIO(_decode(content)),
+        infer_schema_length=0,
+        truncate_ragged_lines=True,
+    )
+    missing = _REQUIRED_EXTRA_COLUMNS - set(raw.columns)
+    if missing:
+        msg = f"CSV for {league.value} is missing core columns: {sorted(missing)}"
+        raise ValueError(msg)
+
+    df = raw.with_columns(
+        pl.col("Season").str.strip_chars().alias("season"),
+        pl.col("Home").str.strip_chars().alias("home_team"),
+        pl.col("Away").str.strip_chars().alias("away_team"),
+        _parse_dates(pl.col("Date")).alias("date"),
+        pl.col("HG").cast(pl.Int64, strict=False).alias("home_goals"),
+        pl.col("AG").cast(pl.Int64, strict=False).alias("away_goals"),
+    ).filter(pl.col("date") >= since)
+    for season in df.get_column("season").drop_nulls().unique().to_list():
+        validate_season(season)
+    return _canonical(df, league, source_file, league.value)
+
+
+def _canonical(
+    df: pl.DataFrame, league: LeagueCode, source_file: str | None, label: str
+) -> pl.DataFrame:
+    """Drop junk rows, normalise odds, and select the storage column order.
+
+    *df* must already carry ``season``, ``date``, team and goal columns.
+    Rows with an unparsable date, team, or score are dropped (the sources
+    carry junk lines and future fixtures); zero valid rows raises.
+    """
+    df = df.filter(
+        pl.col("season").is_not_null()
+        & pl.col("home_team").is_not_null()
         & (pl.col("home_team") != "")
         & pl.col("away_team").is_not_null()
         & (pl.col("away_team") != "")
@@ -108,7 +181,7 @@ def parse_matches_csv(
         & pl.col("away_goals").is_not_null()
     )
     if df.is_empty():
-        msg = f"no valid match rows parsed for {league.value} {season}"
+        msg = f"no valid match rows parsed for {label}"
         raise ValueError(msg)
 
     # Odds: cast to float under canonical names, keep only values > 1.0
@@ -125,12 +198,13 @@ def parse_matches_csv(
 
     return df.select(
         pl.lit(league.value).alias("league"),
-        pl.lit(season).alias("season"),
+        "season",
         "date",
         "home_team",
         "away_team",
         "home_goals",
         "away_goals",
+        pl.lit(False).alias("neutral"),
         *ODDS_COLUMNS,
         pl.lit(source_file, dtype=pl.String).alias("source_file"),
     ).sort("date")
@@ -151,8 +225,8 @@ def _parse_dates(col: pl.Expr) -> pl.Expr:
 
 
 def _decode(content: bytes) -> str:
-    """Decode CSV bytes; some older seasons are latin-1 rather than utf-8."""
+    """Decode CSV bytes (stripping any UTF-8 BOM); some older seasons are latin-1."""
     try:
-        return content.decode("utf-8")
+        return content.decode("utf-8-sig")
     except UnicodeDecodeError:
         return content.decode("latin-1")

@@ -144,6 +144,8 @@ class ArmReport(BaseModel):
     reliability: dict[str, ReliabilityCurve]
     roi: RoiSummary
     clv: ClvSummary
+    hit_rate_1x2: float = Field(ge=0.0, le=1.0)
+    """Share of fixtures where the arm's most likely 1X2 outcome happened."""
     gate: GateResult | None = None
 
 

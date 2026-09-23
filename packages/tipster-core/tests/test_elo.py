@@ -56,6 +56,27 @@ def test_equal_rated_draw_changes_nothing() -> None:
     assert book.ratings[("E0", "Chelsea")] == pytest.approx(1500.0)
 
 
+def test_neutral_venue_drops_home_advantage() -> None:
+    # With the default 75-point home bonus a draw costs the home side points;
+    # at a neutral venue an equal-rated draw is exactly the expected result.
+    home_game = EloBook()
+    home_game.apply("INT", "Kenya", "Uganda", 1, 1)
+    assert home_game.ratings[("INT", "Kenya")] < 1500.0
+
+    neutral_game = EloBook()
+    neutral_game.apply("INT", "Kenya", "Uganda", 1, 1, neutral=True)
+    assert neutral_game.ratings[("INT", "Kenya")] == pytest.approx(1500.0)
+
+
+def test_attach_reads_the_optional_neutral_column() -> None:
+    frame = _frame([("INT", "2026-06-01", "Kenya", "Uganda", 1, 1)]).with_columns(
+        neutral=pl.lit(True)
+    )
+    book = EloBook()
+    book.attach(frame)
+    assert book.ratings[("INT", "Kenya")] == pytest.approx(1500.0)
+
+
 def test_win_moves_winner_up_and_loser_down() -> None:
     book = EloBook()
     book.apply("E0", "Arsenal", "Chelsea", 2, 1)

@@ -114,9 +114,10 @@ def _blocks(
 
 
 def _outcome_1x2(match: MatchResult) -> Literal[0, 1, 2]:
+    """0 = home, 1 = draw, 2 = away — the (home, draw, away) index order."""
     if match.home_goals > match.away_goals:
         return 0
-    if match.home_goals < match.away_goals:
+    if match.home_goals == match.away_goals:
         return 1
     return 2
 
@@ -326,6 +327,7 @@ def _score_arm(
             reliability=reliability,
             roi=roi,
             clv=clv_summary,
+            hit_rate_1x2=(sum(pick.won for pick in picks) / n) if n else 0.0,
         ),
         records,
     )

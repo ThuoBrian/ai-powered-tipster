@@ -1,6 +1,6 @@
 # Repo-wide pre-commit hooks. Language-agnostic fast checks only;
 # language-specific linting lives inside each project.
-# Install:  make setup   (or:  pip install pre-commit && pre-commit install)
+# Install:  just setup   (or:  pip install pre-commit && pre-commit install)
 
 repos:
   # Generic file hygiene

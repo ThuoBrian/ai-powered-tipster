@@ -208,16 +208,18 @@ def _actual_outcome(match: MatchResult) -> Outcome:
 def settle_bets(con: sqlite3.Connection, played: Sequence[MatchResult]) -> int:
     """Settle every pending bet whose fixture appears in *played*.
 
-    Matched on (league, season, date, home team, away team) — the same
-    identity a ``Fixture`` carries. A bet whose match hasn't been ingested
-    yet (or was played but not yet re-ingested) is left pending, not guessed.
+    Matched on (league, date, home team, away team). Season is deliberately
+    left out: a live fixture's season is derived from its date and can be
+    labelled differently from the ingested result (calendar vs split
+    seasons, ADR 0011), and a mismatch would leave the bet pending forever.
+    A bet whose match hasn't been ingested yet is left pending, not guessed.
     """
-    by_fixture: dict[tuple[str, str, date, str, str], MatchResult] = {
-        (m.league.value, m.season, m.date, m.home_team, m.away_team): m for m in played
+    by_fixture: dict[tuple[str, date, str, str], MatchResult] = {
+        (m.league.value, m.date, m.home_team, m.away_team): m for m in played
     }
     settled = 0
     for bet in pending_bets(con):
-        key = (bet.league.value, bet.season, bet.match_date, bet.home_team, bet.away_team)
+        key = (bet.league.value, bet.match_date, bet.home_team, bet.away_team)
         match = by_fixture.get(key)
         if match is None:
             continue

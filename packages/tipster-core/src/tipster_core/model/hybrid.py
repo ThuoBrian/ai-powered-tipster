@@ -122,6 +122,7 @@ def _swap_columns(frame: pl.DataFrame) -> pl.DataFrame:
         away_matches_played=pl.col("home_matches_played"),
         elo_diff=-pl.col("elo_diff"),
         league_code=pl.col("league_code"),
+        neutral=pl.col("neutral"),
     )
     return swapped.select(FEATURE_COLUMNS)
 
@@ -162,6 +163,7 @@ class GbmPoissonPredictor:
                 "away_team": [match.away_team for match in played],
                 "home_goals": [match.home_goals for match in played],
                 "away_goals": [match.away_goals for match in played],
+                "neutral": [match.neutral for match in played],
             }
         )
         self._history = history
@@ -259,6 +261,7 @@ class GbmPoissonPredictor:
                 "date": [fixture.date for fixture in upcoming],
                 "home_team": [fixture.home_team for fixture in upcoming],
                 "away_team": [fixture.away_team for fixture in upcoming],
+                "neutral": [fixture.neutral for fixture in upcoming],
             }
         )
         features = build_features(self._history, fixtures, self.feature_config)

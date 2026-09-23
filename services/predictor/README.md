@@ -14,7 +14,7 @@ architecture-template repo (`services/premier-league-predictor`, scaffolded
 3. Widen the `Predictor` ABC from H/D/A probabilities to the full score
    matrix ([ADR 0003](../../docs/decisions/0003-model-gbm-poisson-hybrid.md))
    and wire it to `tipster_core.storage`.
-4. Add Makefile targets (`predictor-run`, `predictor-test`) and register in
+4. Add justfile recipes (`predictor-run`, `predictor-test`) and register in
    `docs/onboarding.md` / `docs/architecture.md`.
 
 ## Environment variables

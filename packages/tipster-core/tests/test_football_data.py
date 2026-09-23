@@ -8,7 +8,12 @@ import polars as pl
 import pytest
 
 from tipster_core.ingest import football_data
-from tipster_core.ingest.football_data import csv_url, parse_matches_csv
+from tipster_core.ingest.football_data import (
+    csv_url,
+    extra_csv_url,
+    parse_extra_csv,
+    parse_matches_csv,
+)
 from tipster_core.leagues import LeagueCode
 
 PL = LeagueCode.PREMIER_LEAGUE
@@ -91,6 +96,52 @@ def test_csv_url_shape() -> None:
     assert csv_url(PL, "2526") == "https://www.football-data.co.uk/mmz4281/2526/E0.csv"
     with pytest.raises(ValueError, match="invalid season"):
         csv_url(PL, "banana")
+
+
+_EXTRA_HEADER = (
+    "Country,League,Season,Date,Time,Home,Away,HG,AG,Res,PSCH,PSCD,PSCA,MaxCH,MaxCD,MaxCA,"
+    "AvgCH,AvgCD,AvgCA,BFECH,BFECD,BFECA,B365CH,B365CD,B365CA\n"
+)
+
+
+def test_parses_extra_league_csv_with_bom_and_stray_spaces() -> None:
+    csv = (
+        "\ufeff"
+        + _EXTRA_HEADER
+        + "Brazil,Serie A ,2022,10/04/2022,21:00,Old Club,Other,1,0,H,2.0,3.3,3.8,"
+        "2.1,3.4,4.0,2.0,3.3,3.8,,,,2.0,3.3,3.8\n"
+        + "Brazil,Serie A ,2026,20/09/2026,22:30, Flamengo RJ ,Bragantino,2,1,H,,,,"
+        "1.33,5.5,9.5,1.3,5.2,9.0,,,,1.3,5.0,9.0\n"
+    ).encode()
+    frame = parse_extra_csv(csv, LeagueCode.BRAZIL)
+    # 2022 is before the default 2023-01-01 window.
+    assert frame.height == 1
+    row = frame.row(0, named=True)
+    assert row["league"] == "BRA"
+    assert row["season"] == "2026"
+    assert row["home_team"] == "Flamengo RJ"
+    assert row["date"] == date(2026, 9, 20)
+    assert row["neutral"] is False
+    # Closing odds map straight across; empty Pinnacle and opening odds are null.
+    assert row["odds_pinnacle_c_h"] is None
+    assert row["odds_max_c_h"] == 1.33
+    assert row["odds_b365_c_a"] == 9.0
+    assert row["odds_b365_h"] is None
+
+
+def test_extra_league_split_season_format() -> None:
+    csv = (
+        _EXTRA_HEADER
+        + "Mexico,Liga MX,2025/2026,15/01/2026,02:00,America,Tigres,1,1,D,,,,,,,,,,,,,,,\n"
+    ).encode()
+    frame = parse_extra_csv(csv, LeagueCode.MEXICO)
+    assert frame.get_column("season").to_list() == ["2025/2026"]
+
+
+def test_extra_csv_url_rejects_main_divisions() -> None:
+    assert extra_csv_url(LeagueCode.BRAZIL) == "https://www.football-data.co.uk/new/BRA.csv"
+    with pytest.raises(ValueError, match=r"not a football-data.co.uk extra league"):
+        extra_csv_url(PL)
 
 
 def test_download_rejects_html_pages(monkeypatch: pytest.MonkeyPatch) -> None:

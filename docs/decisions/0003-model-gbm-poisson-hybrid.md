@@ -50,3 +50,20 @@ contract is widened from H/D/A probabilities to the full score matrix.
   FBref) is the highest-value future addition.
 - A Dixon-Coles reference implementation must be maintained alongside the
   hybrid — that is the cost of having a honest benchmark.
+
+## Amendment (2026-09-23): the gate failed; the dashboard runs Dixon-Coles
+
+The first backtest with correct outcome labels (ADR 0005 amendment) —
+Premier League, 410 fixtures, 2025-08-30 to 2026-09-12, 14-day blocks —
+had the hybrid lose to the Dixon-Coles reference on both gate metrics:
+
+| Arm | 1X2 log loss | 1X2 Brier | Correct result |
+|-----|--------------|-----------|----------------|
+| gbm-poisson | 1.0888 | 0.6484 | 45.4% |
+| dixon-coles | 1.0465 | 0.6241 | 49.8% |
+
+Per this ADR's own rule, the hybrid's complexity isn't justified yet, so
+the dashboard pages (`tipster_ui.shared.fit_for_league`) price with
+calibrated Dixon-Coles. The hybrid stays in the backtest as an arm; switch
+back once it passes the gate on a larger corpus (all five leagues, more
+seasons). The likeliest cause is too little training data for 18 features.

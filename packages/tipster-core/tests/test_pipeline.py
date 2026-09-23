@@ -73,6 +73,28 @@ def test_fetch_live_odds_no_refresh_reuses_cache(
     assert calls["n"] == 1  # second call replayed the cache, no new API request
 
 
+def test_fetch_live_odds_for_a_tournament_uses_its_key_and_neutral_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: dict[str, object] = {}
+
+    def fake_fetch(league: LeagueCode, api_key: str, **kwargs: object) -> bytes:
+        seen.update(kwargs)
+        return json.dumps(_EVENT).encode()
+
+    monkeypatch.setattr(pipeline, "fetch_odds", fake_fetch)
+    cache_dir = tmp_path / "live_odds"
+    results = pipeline.fetch_live_odds(
+        LeagueCode.INTERNATIONAL,
+        "test-key",
+        sport_key="soccer_africa_cup_of_nations",
+        cache_dir=cache_dir,
+    )
+    assert seen["sport_key"] == "soccer_africa_cup_of_nations"
+    assert (cache_dir / "soccer_africa_cup_of_nations.json").exists()
+    assert results[0][0].neutral is True  # AFCON finals: neutral by default
+
+
 def test_fetch_live_odds_no_refresh_fetches_when_nothing_cached(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

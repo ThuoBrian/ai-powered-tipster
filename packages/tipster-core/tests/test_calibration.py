@@ -98,6 +98,34 @@ def test_1x2_stays_renormalised() -> None:
     assert total == pytest.approx(1.0, abs=1e-9)
 
 
+def test_calibration_never_outputs_a_hard_zero() -> None:
+    # Arsenal never loses in the corpus, so the away curve sees only misses.
+    # Unbounded isotonic would map away to 0 and inflate home to match.
+    table = {"Arsenal": (0.7, 0.2, 0.1)}
+    matches = [_match(i, "Arsenal", "Spurs", 1 if i % 3 else 0, 0) for i in range(40)]
+    wrapper = CalibratedPredictor(_ScriptedPredictor(table))
+    wrapper.fit(matches)
+    markets = wrapper.predict([matches[0].to_fixture()])[0].markets
+    # Floored at 2% before the 1X2 renormalisation, which can nudge it just under.
+    assert markets.away > 0.015
+    assert markets.home < 0.985
+
+
+def test_goals_only_calibration_leaves_1x2_raw() -> None:
+    # Same overconfident corpus as above: full calibration pulls home to ~0.5,
+    # goals-only calibration must leave the inner 0.8 alone.
+    table = {"Arsenal": (0.8, 0.0, 0.2)}
+    matches = [
+        _match(i, "Arsenal", "Spurs", 1 if i % 2 == 0 else 0, 0 if i % 2 == 0 else 1)
+        for i in range(40)
+    ]
+    wrapper = CalibratedPredictor(_ScriptedPredictor(table), calibrate_1x2=False)
+    wrapper.fit(matches)
+    prediction = wrapper.predict([matches[0].to_fixture()])[0]
+    assert prediction.markets.home == pytest.approx(0.8)
+    assert prediction.model == "scripted-calibrated-goals"
+
+
 def test_fit_protocol_expanding_window_then_full() -> None:
     table = {"Arsenal": (0.6, 0.2, 0.2), "Spurs": (0.2, 0.2, 0.6)}
     matches = [

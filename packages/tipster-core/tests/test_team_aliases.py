@@ -13,6 +13,12 @@ def test_resolves_known_alias() -> None:
     assert resolve_team_name(PL, "Nottingham Forest") == "Nott'm Forest"
 
 
+def test_accented_live_api_names_resolve() -> None:
+    # Real Odds API spellings (accents, club prefixes) seen in a live response.
+    assert resolve_team_name(LeagueCode.LA_LIGA, "Málaga") == "Malaga"
+    assert resolve_team_name(LeagueCode.LA_LIGA, "Deportivo La Coruña") == "La Coruna"
+
+
 def test_unmapped_name_passes_through_unchanged() -> None:
     assert resolve_team_name(PL, "Arsenal") == "Arsenal"
     assert resolve_team_name(PL, "Some Future Club FC") == "Some Future Club FC"

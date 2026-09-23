@@ -91,3 +91,21 @@ outside the `Predictor` protocol — it cannot leak into production paths.
   minutes, but real.
 - The gate can fail honestly; when it does, the finding goes into this
   ADR's record (or a tuning note), not a lowered bar.
+
+## Amendment (2026-09-23)
+
+Two defects found while adding a 1X2 hit rate to the report:
+
+- **Outcome labels were swapped.** The harness encoded an away win as `1`
+  and a draw as `2`, while the metrics and picks index `(home, draw, away)`.
+  Every backtest before this date scored away wins as draws (and vice
+  versa) in 1X2 Brier, log loss, ROI settlement, and the gate. Those
+  results are void; re-run `just backtest`. The model's training and
+  calibration used their own, correct labels and were unaffected.
+- **Calibration could emit hard 0s.** On small corpora, isotonic regression
+  mapped sparse bins to exactly 0 (e.g. a 0% away win), and the 1X2
+  renormalisation inflated the favourite to match. Calibrated
+  probabilities are now bounded to `[0.02, 0.98]`.
+
+The report also gains `hit_rate_1x2`: the share of fixtures where the
+arm's most likely 1X2 outcome happened.

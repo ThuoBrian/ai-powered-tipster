@@ -1,23 +1,37 @@
-"""``tipster-ingest`` — pull football-data.co.uk data into the tipster DuckDB.
+"""``tipster-ingest`` — pull match data into the tipster DuckDB (ADR 0002, ADR 0011).
 
 Usage::
 
-    tipster-ingest [--leagues E0,SP1,D1,I1,F1] [--seasons 2425,2526,2627]
+    tipster-ingest [--leagues E0,SP1,BRA,INT,...] [--seasons 2425,2526,2627]
                    [--db PATH] [--raw-dir PATH] [--refresh]
 
-Each (league, season) pair is ingested independently — one failure (e.g. a
-season file that does not exist yet) does not stop the rest.
+Default is every competition. Main football-data.co.uk divisions ingest one
+file per (league, season); extra leagues (``BRA``, ``USA``, ...) and
+internationals (``INT``) are one all-seasons file each, so ``--seasons``
+doesn't apply to them. The current season's file is always re-downloaded
+(new results land in it every week); finished seasons reuse the raw cache
+unless ``--refresh``. Each file is ingested independently — one failure
+does not stop the rest.
 """
 
 from __future__ import annotations
 
 import argparse
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from datetime import date
+from functools import partial
 
-from tipster_core.ingest.pipeline import DEFAULT_RAW_DIR, ingest_season
-from tipster_core.leagues import BIG_5, LeagueCode
+import polars as pl
 
-DEFAULT_LEAGUES = ",".join(league.value for league in BIG_5)
+from tipster_core.ingest.pipeline import (
+    DEFAULT_RAW_DIR,
+    ingest_extra_league,
+    ingest_internationals,
+    ingest_season,
+)
+from tipster_core.leagues import EXTRA_LEAGUES, LeagueCode, season_from_date
+
+DEFAULT_LEAGUES = ",".join(league.value for league in LeagueCode)
 DEFAULT_SEASONS = "2425,2526,2627"
 
 
@@ -25,17 +39,17 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="tipster-ingest",
-        description="Ingest football-data.co.uk CSVs into the tipster DuckDB.",
+        description="Ingest football-data.co.uk and international results into the DuckDB.",
     )
     parser.add_argument(
         "--leagues",
         default=DEFAULT_LEAGUES,
-        help="comma-separated league codes (default: big 5)",
+        help="comma-separated league codes (default: every competition)",
     )
     parser.add_argument(
         "--seasons",
         default=DEFAULT_SEASONS,
-        help="comma-separated season codes (default: 2425,2526,2627)",
+        help="comma-separated season codes for main divisions (default: 2425,2526,2627)",
     )
     parser.add_argument(
         "--db",
@@ -50,7 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--refresh",
         action="store_true",
-        help="re-download CSVs even if cached",
+        help="re-download finished seasons too (the current season always refreshes)",
     )
     return parser
 
@@ -60,26 +74,35 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     leagues = [LeagueCode.from_code(code) for code in _split(args.leagues)]
     seasons = _split(args.seasons)
+    current = season_from_date(date.today())
 
     failures: list[str] = []
     total = 0
+
+    def run(label: str, job: Callable[[], pl.DataFrame]) -> None:
+        nonlocal total
+        try:
+            frame = job()
+        except Exception as error:
+            failures.append(label)
+            print(f"  {label}: FAILED ({error})")
+            return
+        total += frame.height
+        print(f"  {label}: {frame.height} matches")
+
+    where = {"db_path": args.db, "raw_dir": args.raw_dir}
     for league in leagues:
-        for season in seasons:
-            label = f"{league.value} {season}"
-            try:
-                frame = ingest_season(
-                    league,
-                    season,
-                    db_path=args.db,
-                    raw_dir=args.raw_dir,
-                    refresh=args.refresh,
+        if league is LeagueCode.INTERNATIONAL:
+            run(league.value, partial(ingest_internationals, **where))
+        elif league in EXTRA_LEAGUES:
+            run(league.value, partial(ingest_extra_league, league, **where))
+        else:
+            for season in seasons:
+                refresh = args.refresh or season == current
+                run(
+                    f"{league.value} {season}",
+                    partial(ingest_season, league, season, refresh=refresh, **where),
                 )
-            except Exception as error:
-                failures.append(label)
-                print(f"  {label}: FAILED ({error})")
-                continue
-            total += frame.height
-            print(f"  {label}: {frame.height} matches")
 
     print(f"Ingested {total} matches into {args.db}")
     if failures:

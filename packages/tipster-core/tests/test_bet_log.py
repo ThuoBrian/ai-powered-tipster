@@ -135,6 +135,23 @@ def test_settle_bets_computes_clv_from_pinnacle_closing(con) -> None:
     assert bet.clv_pct == pytest.approx((2.0 - 2.2) / 2.2 * 100.0)
 
 
+def test_settle_bets_ignores_a_differently_labelled_season(con) -> None:
+    # The live fixture said "2526"; the ingested result is labelled "2025".
+    bet_log.record_bet(con, _tip(pick="home"))
+    played = [
+        MatchResult(
+            league=PL,
+            season="2025",
+            date=date(2026, 1, 1),
+            home_team="Arsenal",
+            away_team="Chelsea",
+            home_goals=1,
+            away_goals=0,
+        )
+    ]
+    assert bet_log.settle_bets(con, played) == 1
+
+
 def test_settle_bets_leaves_unplayed_fixtures_pending(con) -> None:
     bet_log.record_bet(con, _tip())
     settled_count = bet_log.settle_bets(con, played=[])

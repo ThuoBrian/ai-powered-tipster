@@ -7,7 +7,7 @@ Usage::
 Settlement matches a pending bet's (league, season, date, home team, away
 team) against the matches DuckDB — a bet whose match hasn't been ingested
 yet (or hasn't been played yet) is left pending, never guessed. Run this
-after ``make ingest`` picks up newly played fixtures.
+after ``just ingest`` picks up newly played fixtures.
 """
 
 from __future__ import annotations

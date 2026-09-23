@@ -33,8 +33,10 @@ from tipster_core.leagues import LeagueCode, season_from_date
 from tipster_core.team_aliases import resolve_team_name
 
 BASE_URL = "https://api.the-odds-api.com/v4/sports/{sport_key}/odds"
+SPORTS_URL = "https://api.the-odds-api.com/v4/sports"
 
-#: football-data.co.uk league -> The Odds API sport key (soccer only).
+#: League -> The Odds API sport key (soccer only). Leagues missing here have
+#: no live feed; they can still be priced from typed-in odds.
 SPORT_KEYS: Mapping[LeagueCode, str] = {
     LeagueCode.PREMIER_LEAGUE: "soccer_epl",
     LeagueCode.LA_LIGA: "soccer_spain_la_liga",
@@ -42,22 +44,83 @@ SPORT_KEYS: Mapping[LeagueCode, str] = {
     LeagueCode.SERIE_A: "soccer_italy_serie_a",
     LeagueCode.LIGUE_1: "soccer_france_ligue_one",
     LeagueCode.EREDIVISIE: "soccer_netherlands_eredivisie",
+    # Verified against the Odds API sports list, 2026-09-23 (ADR 0011).
+    LeagueCode.CHAMPIONSHIP: "soccer_efl_champ",
+    LeagueCode.SCOTTISH_PREMIERSHIP: "soccer_spl",
+    LeagueCode.PRIMEIRA_LIGA: "soccer_portugal_primeira_liga",
+    LeagueCode.BELGIAN_PRO_LEAGUE: "soccer_belgium_first_div",
+    LeagueCode.SUPER_LIG: "soccer_turkey_super_league",
+    LeagueCode.GREEK_SUPER_LEAGUE: "soccer_greece_super_league",
+    LeagueCode.BRAZIL: "soccer_brazil_campeonato",
+    LeagueCode.ARGENTINA: "soccer_argentina_primera_division",
+    LeagueCode.USA: "soccer_usa_mls",
+    LeagueCode.JAPAN: "soccer_japan_j_league",
+    LeagueCode.MEXICO: "soccer_mexico_ligamx",
+    LeagueCode.NORWAY: "soccer_norway_eliteserien",
+    LeagueCode.SWEDEN: "soccer_sweden_allsvenskan",
+    LeagueCode.DENMARK: "soccer_denmark_superliga",
+    LeagueCode.AUSTRIA: "soccer_austria_bundesliga",
+    LeagueCode.SWITZERLAND: "soccer_switzerland_superleague",
+    LeagueCode.POLAND: "soccer_poland_ekstraklasa",
+    LeagueCode.CHINA: "soccer_china_superleague",
+    LeagueCode.FINLAND: "soccer_finland_veikkausliiga",
+    LeagueCode.IRELAND: "soccer_league_of_ireland",
+    LeagueCode.RUSSIA: "soccer_russia_premier_league",
+}
+
+#: National-team tournaments: sport key -> (label, played at neutral venues?).
+#: Final tournaments are treated as neutral and qualifiers/Nations League as
+#: home games; the API doesn't say who is hosting, so a host nation's
+#: tournament games are priced as neutral too (ADR 0011).
+INT_TOURNAMENTS: Mapping[str, tuple[str, bool]] = {
+    "soccer_fifa_world_cup": ("FIFA World Cup", True),
+    "soccer_fifa_world_cup_qualifiers_europe": ("World Cup qualifiers - Europe", False),
+    "soccer_fifa_world_cup_qualifiers_south_america": (
+        "World Cup qualifiers - South America",
+        False,
+    ),
+    "soccer_uefa_european_championship": ("UEFA Euro", True),
+    "soccer_uefa_euro_qualification": ("Euro qualifiers", False),
+    "soccer_uefa_nations_league": ("UEFA Nations League", False),
+    "soccer_conmebol_copa_america": ("Copa America", True),
+    "soccer_africa_cup_of_nations": ("Africa Cup of Nations", True),
+    "soccer_concacaf_gold_cup": ("CONCACAF Gold Cup", True),
 }
 
 _H2H = "h2h"
 
 
-def odds_url(league: LeagueCode) -> str:
-    """The Odds API endpoint for one league's live 1X2 odds."""
-    return BASE_URL.format(sport_key=SPORT_KEYS[league])
+def odds_url(league: LeagueCode, sport_key: str | None = None) -> str:
+    """The Odds API endpoint for one league's (or one tournament's) live 1X2 odds."""
+    key = sport_key or SPORT_KEYS.get(league)
+    if key is None:
+        hint = " — pick a tournament" if league is LeagueCode.INTERNATIONAL else ""
+        msg = f"no live odds feed for {league.label}{hint}"
+        raise ValueError(msg)
+    return BASE_URL.format(sport_key=key)
+
+
+def active_sport_keys(api_key: str, *, timeout: float = 30.0) -> set[str]:
+    """Sport keys currently in season. Free: this endpoint doesn't use quota."""
+    response = httpx.get(SPORTS_URL, params={"apiKey": api_key}, timeout=timeout)
+    response.raise_for_status()
+    return {sport["key"] for sport in response.json() if sport.get("active")}
 
 
 def fetch_odds(
-    league: LeagueCode, api_key: str, *, regions: str = "uk,eu", timeout: float = 30.0
+    league: LeagueCode,
+    api_key: str,
+    *,
+    sport_key: str | None = None,
+    regions: str = "uk,eu",
+    timeout: float = 30.0,
 ) -> bytes:
-    """Fetch every upcoming fixture's 1X2 odds for one league, as raw JSON bytes."""
+    """Fetch every upcoming fixture's 1X2 odds, as raw JSON bytes.
+
+    Costs one request per region (``uk,eu`` = 2) against the monthly quota.
+    """
     response = httpx.get(
-        odds_url(league),
+        odds_url(league, sport_key),
         params={
             "apiKey": api_key,
             "regions": regions,
@@ -70,8 +133,13 @@ def fetch_odds(
     return response.content
 
 
-def parse_odds_response(content: bytes, league: LeagueCode) -> list[tuple[Fixture, MatchOdds]]:
-    """Parse one league's The Odds API response into ``(Fixture, MatchOdds)`` pairs."""
+def parse_odds_response(
+    content: bytes, league: LeagueCode, *, neutral: bool = False
+) -> list[tuple[Fixture, MatchOdds]]:
+    """Parse one Odds API response into ``(Fixture, MatchOdds)`` pairs.
+
+    *neutral* marks every fixture as a neutral-venue game (tournaments).
+    """
     events = json.loads(content)
     results: list[tuple[Fixture, MatchOdds]] = []
     for event in events:
@@ -84,10 +152,11 @@ def parse_odds_response(content: bytes, league: LeagueCode) -> list[tuple[Fixtur
         commence = dt.fromisoformat(event["commence_time"]).astimezone(UTC)
         fixture = Fixture(
             league=league,
-            season=season_from_date(commence.date()),
+            season=season_from_date(commence.date(), league),
             date=commence.date(),
             home_team=resolve_team_name(league, home_team),
             away_team=resolve_team_name(league, away_team),
+            neutral=neutral,
         )
         odds = MatchOdds(
             b365=prices.get("bet365"),

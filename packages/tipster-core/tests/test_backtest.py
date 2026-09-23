@@ -12,7 +12,7 @@ from tipster_core.backtest.baselines import (
     closing_odds,
     opening_odds,
 )
-from tipster_core.backtest.harness import BacktestConfig, run_backtest
+from tipster_core.backtest.harness import BacktestConfig, _outcome_1x2, run_backtest
 from tipster_core.backtest.metrics import (
     brier_1x2,
     brier_binary,
@@ -211,6 +211,39 @@ def test_roi_counts_bets_and_settles_with_closing_odds() -> None:
             if pick.odds is not None:
                 expected = (pick.odds - 1.0) if pick.won else -1.0
                 assert pick.profit == pytest.approx(expected)
+
+
+def test_outcome_index_matches_home_draw_away_order() -> None:
+    # Metrics and picks index outcomes as (home, draw, away): 0, 1, 2.
+    assert _outcome_1x2(_match_with_odds().model_copy(update={"home_goals": 2})) == 0
+    draw = _match_with_odds().model_copy(update={"home_goals": 1, "away_goals": 1})
+    assert _outcome_1x2(draw) == 1
+    away = _match_with_odds().model_copy(update={"home_goals": 0, "away_goals": 1})
+    assert _outcome_1x2(away) == 2
+
+
+def test_picks_settle_against_the_true_result() -> None:
+    results = _corpus_results(seed=5)
+    config = BacktestConfig(block_days=7, min_training_matches=40, arms=("dixon-coles",))
+    report = run_backtest(results, config)
+    for record in report.records:
+        if record.true_home_goals > record.true_away_goals:
+            actual = "home"
+        elif record.true_home_goals == record.true_away_goals:
+            actual = "draw"
+        else:
+            actual = "away"
+        for pick in record.picks:
+            assert pick.won == (pick.pick == actual)
+
+
+def test_hit_rate_is_share_of_correct_picks() -> None:
+    results = _corpus_results(seed=5)
+    config = BacktestConfig(block_days=7, min_training_matches=40, arms=("dixon-coles",))
+    report = run_backtest(results, config)
+    arm = report.arms["dixon-coles"]
+    picks = [pick for record in report.records for pick in record.picks]
+    assert arm.hit_rate_1x2 == pytest.approx(sum(p.won for p in picks) / len(picks))
 
 
 def test_clv_summary_present() -> None:

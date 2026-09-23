@@ -18,6 +18,8 @@ than formality.
 | [0007](0007-live-odds-ingestion.md) | Live odds ingestion: The Odds API | Accepted |
 | [0008](0008-team-name-reconciliation.md) | Team-name reconciliation for live odds | Accepted |
 | [0009](0009-paper-trading-bet-log.md) | Paper-trading bet log | Accepted |
+| [0010](0010-task-runner-just.md) | Task runner: just replaces make | Accepted |
+| [0011](0011-more-competitions-and-internationals.md) | More competitions and national-team tournaments | Accepted |
 
 ## Format
 
