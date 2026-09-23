@@ -18,5 +18,5 @@
       "Bash(curl * | bash*)"
     ]
   },
-  "includeCoAuthoredBy": true
+  "includeCoAuthoredBy": false
 }
