@@ -57,7 +57,7 @@ test:
 tipster-core-test:
     {{ run }} pytest packages/tipster-core
 
-# Ingest football-data.co.uk CSVs (big-5, 2024/25 onward) into data/tipster.duckdb
+# Ingest results for every competition (club + internationals) into data/tipster.duckdb
 tipster-core-ingest:
     {{ run }} tipster-ingest
 

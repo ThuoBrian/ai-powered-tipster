@@ -64,11 +64,11 @@ flowchart LR
 | Component | Location | Phase |
 |-----------|----------|-------|
 | Ingest + storage | `packages/tipster-core` | 0 (done) |
-| Feature builder | `packages/tipster-core` | 1 |
-| Model (GBM → Poisson hybrid) | `packages/tipster-core` | 1 |
-| Backtest harness | `packages/tipster-core` | 1 |
-| Value engine (devig, EV, Kelly) | `packages/tipster-core` | 2 |
-| Streamlit UI | `apps/tipster-ui` | 0 (status page) → 2 |
+| Feature builder | `packages/tipster-core` | 1 (done) |
+| Model (GBM → Poisson hybrid, Dixon-Coles reference) | `packages/tipster-core` | 1 (done) |
+| Backtest harness | `packages/tipster-core` | 1 (done) |
+| Value engine (devig, EV, Kelly) | `packages/tipster-core` | 2 (done) |
+| Streamlit UI | `apps/tipster-ui` | 2 (done: predict fixtures, value finder, bet log) |
 | Predictor service (fixtures) | `services/predictor` | 2–3 |
 | Reasoning layer | `packages/tipster-core` + Ollama | 3 |
 | Kenya local-book comparison | UI + value engine | 4 |
@@ -108,7 +108,9 @@ Poisson layer with the Dixon-Coles low-score correction turns the two
 lambdas into a scoreline probability matrix; every market probability is
 derived exactly from that matrix; isotonic calibration sits on top. Elo
 pools are per-league. A pure Dixon-Coles reference implementation is kept as
-the benchmark the hybrid must beat.
+the benchmark the hybrid must beat. So far it hasn't (ADR 0003 amendment,
+2026-09-23), so the dashboard prices with calibrated Dixon-Coles and the
+hybrid runs only as a backtest arm until it passes on a larger corpus.
 
 ## Evaluation and metrics
 
@@ -147,9 +149,9 @@ paper-traded and logged (SQLite bet log, phase 2) until CLV says otherwise.
 | Phase | Delivers | Status |
 |-------|----------|--------|
 | 0 | Repo scaffold, ingest → DuckDB, contracts, UI status page | Done |
-| 1 | Feature builder, hybrid model, calibration, backtest harness | Next |
-| 2 | Value engine, live odds, Streamlit value finder + bet log | Planned |
-| 3 | Predictor service port, Ollama reasoning layer | Planned |
+| 1 | Feature builder, hybrid model, calibration, backtest harness | Done |
+| 2 | Value engine, live odds, Streamlit value finder + bet log | Done |
+| 3 | Predictor service port, Ollama reasoning layer | Next |
 | 4 | All leagues live, CLV tracking, Kenya local-book comparison | Planned |
 
 ## Risks and mitigations

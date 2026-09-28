@@ -39,10 +39,16 @@ Always run commands through `uv run` (the justfile does). Never use raw pip.
 - Ingest is idempotent per (league, season). The parser must tolerate
   missing odds columns — column sets drift between seasons.
 
-## Current state (2026-09-05)
+## Current state (2026-09-28)
 
-Phase 0 complete: scaffold, ingest, storage, contracts, Streamlit status
-page. Phase 1 next: feature builder, GBM → Poisson hybrid, walk-forward
-backtest harness ([ADR 0003](docs/decisions/0003-model-gbm-poisson-hybrid.md)).
-Key extension points: `tipster_core.contracts` (domain models) and
-`tipster_core.storage` (DuckDB schema).
+Phases 0–2 complete: ingest for ~40 competitions (ADR 0011), feature
+builder, GBM → Poisson hybrid and Dixon-Coles models, walk-forward backtest,
+value engine (Shin devig, EV, Kelly), live odds, and the Streamlit pages
+(predict fixtures, value finder, bet log). The hybrid failed its gate
+against Dixon-Coles, so the dashboard prices with calibrated Dixon-Coles
+(`tipster_ui.shared.fit_for_league`, [ADR 0003 amendment](docs/decisions/0003-model-gbm-poisson-hybrid.md)).
+Phase 3 next: port `services/predictor` and add the Ollama reasoning layer
+([ADR 0004](docs/decisions/0004-reasoning-layer-local-ollama.md)).
+Key extension points: `tipster_core.contracts` (domain models),
+`tipster_core.storage` (DuckDB schema), and `tipster_core.predictor`
+(the model protocol).

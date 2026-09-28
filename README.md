@@ -28,7 +28,7 @@ just start
 ```
 
 This syncs dependencies, downloads match history on the first run, and
-opens the dashboard at http://localhost:8501. The first download takes a few
+opens the dashboard at <http://localhost:8501>. The first download takes a few
 minutes and writes `data/tipster.duckdb`. After that, `just start` goes
 straight to the dashboard. Run `just ingest` when you want the latest
 results.
@@ -70,7 +70,7 @@ loads `.env` for you.
 Run `just` on its own to list every recipe. The ones you'll use most:
 
 | Command | What it does |
-|---------|--------------|
+| ------- | ------------ |
 | `just start` | Sync, ingest if there's no database yet, launch the dashboard |
 | `just run-ui` | Launch the dashboard only |
 | `just ingest` | Download results for every competition into DuckDB |
@@ -154,4 +154,4 @@ pass before you push. Significant decisions get an ADR in
 
 ## License
 
-MIT. Copyright (c) 2026 Brian Thuo.
+[MIT](LICENSE). Copyright (c) 2026 Brian Thuo.
