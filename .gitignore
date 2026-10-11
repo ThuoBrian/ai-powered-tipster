@@ -50,6 +50,9 @@ htmlcov/
 .pytest_cache/
 junit*.xml
 
+# --- Local tools / nested repos (never commit as gitlinks) ---
+veris/
+
 # --- Temporary files ---
 tmp/
 temp/
